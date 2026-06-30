@@ -39,12 +39,6 @@ function CamtImport({ accountId }: { accountId: string }) {
   )
 }
 
-const monthStart = () => {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-}
-const today = () => new Date().toISOString().slice(0, 10)
-
 const bookingFields: Field<Booking>[] = [
   formField('bookDate', { accessor: 'bookDate', title: 'Buchungstag', sortable: true }, { type: 'date', required: true, delete: true }),
   formField('counterpartyName', { accessor: 'counterpartyName', title: 'Gegenpartei' }, {}),
@@ -100,7 +94,7 @@ export function Accounts() {
 
   const generateStatements = async (accounts: Account[]) => {
     for (const account of accounts) {
-      await apiPost(`/api/accounts/${account.id}/statements`, { fromDate: monthStart(), toDate: today() })
+      await apiPost(`/api/accounts/${account.id}/statements`, {})
     }
     await queryClient.invalidateQueries({ queryKey: ['statements'] })
     notifications.show({ color: 'teal', message: `camt.053 für ${accounts.length} Konto/Konten erzeugt und zum Abruf freigegeben.` })

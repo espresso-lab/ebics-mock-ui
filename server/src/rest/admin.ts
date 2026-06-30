@@ -152,9 +152,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     const account = store.getAccount(id)
     if (!account) return reply.code(404).send({ error: 'account not found' })
     const body = req.body as { fromDate?: string; toDate?: string }
-    const fromDate = body.fromDate ?? '2026-01-01'
-    const toDate = body.toDate ?? new Date().toISOString().slice(0, 10)
     const all = store.listBookings(id)
+    const dates = all.map((b) => b.bookDate).filter(Boolean).sort()
+    const fromDate = body.fromDate ?? dates[0] ?? '2026-01-01'
+    const toDate = body.toDate ?? dates[dates.length - 1] ?? new Date().toISOString().slice(0, 10)
     const inRange = all.filter((b) => b.bookDate >= fromDate && b.bookDate <= toDate)
     const opening = all.filter((b) => b.bookDate < fromDate).reduce((s, b) => s + signed(b), 0)
     const closing = opening + inRange.reduce((s, b) => s + signed(b), 0)

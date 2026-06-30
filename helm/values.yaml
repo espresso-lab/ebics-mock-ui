@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/jviets/ebics-mock-ui
+  repository: ghcr.io/espresso-lab/ebics-mock-ui
   tag: latest
   pullPolicy: Always
 

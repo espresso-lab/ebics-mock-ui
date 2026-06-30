@@ -1,7 +1,7 @@
 import type { Account, Booking } from '@ebics-mock/shared'
 import { escapeXml } from './xml.js'
 
-const CAMT_NS = 'urn:iso:std:iso:20022:tech:xsd:camt.053.001.02'
+const CAMT_NS = 'urn:iso:std:iso:20022:tech:xsd:camt.053.001.08'
 
 export interface CamtInput {
   msgId: string
@@ -25,23 +25,27 @@ function balance(code: string, amount: string, currency: string, date: string): 
   )
 }
 
-function entry(booking: Booking): string {
+function entry(booking: Booking, ownIban: string): string {
   const amount = Math.abs(Number(booking.amount)).toFixed(2)
-  const party =
+  const counterparty = `<Pty><Nm>${escapeXml(booking.counterpartyName)}</Nm></Pty>`
+  const counterpartyAcct = booking.counterpartyIban ? `<Id><IBAN>${booking.counterpartyIban}</IBAN></Id>` : ''
+  const ownAcct = `<Id><IBAN>${ownIban}</IBAN></Id>`
+  const parties =
     booking.creditDebit === 'CRDT'
-      ? `<RltdPties><Dbtr><Nm>${escapeXml(booking.counterpartyName)}</Nm></Dbtr>${booking.counterpartyIban ? `<DbtrAcct><Id><IBAN>${booking.counterpartyIban}</IBAN></Id></DbtrAcct>` : ''}</RltdPties>`
-      : `<RltdPties><Cdtr><Nm>${escapeXml(booking.counterpartyName)}</Nm></Cdtr>${booking.counterpartyIban ? `<CdtrAcct><Id><IBAN>${booking.counterpartyIban}</IBAN></Id></CdtrAcct>` : ''}</RltdPties>`
+      ? `<Dbtr>${counterparty}</Dbtr>${counterpartyAcct ? `<DbtrAcct>${counterpartyAcct}</DbtrAcct>` : ''}<CdtrAcct>${ownAcct}</CdtrAcct>`
+      : `<DbtrAcct>${ownAcct}</DbtrAcct><Cdtr>${counterparty}</Cdtr>${counterpartyAcct ? `<CdtrAcct>${counterpartyAcct}</CdtrAcct>` : ''}`
   return (
     `<Ntry><Amt Ccy="${booking.currency}">${amount}</Amt><CdtDbtInd>${booking.creditDebit}</CdtDbtInd>` +
-    `<Sts>BOOK</Sts><BookgDt><Dt>${booking.bookDate}</Dt></BookgDt><ValDt><Dt>${booking.valueDate}</Dt></ValDt>` +
-    `<NtryDtls><TxDtls>${party}` +
+    `<Sts><Cd>BOOK</Cd></Sts><BookgDt><Dt>${booking.bookDate}</Dt></BookgDt><ValDt><Dt>${booking.valueDate}</Dt></ValDt>` +
+    `<BkTxCd><Prtry><Cd>NTRF</Cd></Prtry></BkTxCd>` +
+    `<NtryDtls><TxDtls><RltdPties>${parties}</RltdPties>` +
     `<RmtInf><Ustrd>${escapeXml(booking.remittance)}</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>`
   )
 }
 
 export function generateCamt053(input: CamtInput): string {
   const { account } = input
-  const entries = input.bookings.map(entry).join('')
+  const entries = input.bookings.map((booking) => entry(booking, account.iban)).join('')
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<Document xmlns="${CAMT_NS}"><BkToCstmrStmt>` +
@@ -49,8 +53,8 @@ export function generateCamt053(input: CamtInput): string {
     `<Stmt><Id>${input.statementId}</Id><CreDtTm>${input.createdAt}</CreDtTm>` +
     `<FrToDt><FrDtTm>${input.fromDate}T00:00:00</FrDtTm><ToDtTm>${input.toDate}T23:59:59</ToDtTm></FrToDt>` +
     `<Acct><Id><IBAN>${account.iban}</IBAN></Id><Ccy>${account.currency}</Ccy>` +
-    `<Ownr><Nm>${escapeXml(account.name)}</Nm></Ownr>` +
-    (account.bic ? `<Svcr><FinInstnId><BIC>${account.bic}</BIC></FinInstnId></Svcr>` : '') +
+    (account.name ? `<Nm>${escapeXml(account.name)}</Nm><Ownr><Nm>${escapeXml(account.name)}</Nm></Ownr>` : '') +
+    (account.bic ? `<Svcr><FinInstnId><BICFI>${account.bic}</BICFI></FinInstnId></Svcr>` : '') +
     `</Acct>` +
     balance('OPBD', input.openingBalance, account.currency, input.fromDate) +
     balance('CLBD', input.closingBalance, account.currency, input.toDate) +

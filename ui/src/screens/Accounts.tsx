@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Button, FileButton } from '@mantine/core'
+import { Box, Button, FileButton, Group, Radio } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconFileText, IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -50,7 +50,24 @@ const bookingFields: Field<Booking>[] = [
   formField('counterpartyName', { accessor: 'counterpartyName', title: 'Gegenpartei' }, {}),
   formField('counterpartyIban', { accessor: 'counterpartyIban', title: 'Gegen-IBAN' }, {}),
   formField('remittance', { accessor: 'remittance', title: 'Verwendungszweck' }, {}),
-  formField('creditDebit', { accessor: 'creditDebit', title: 'S/H', render: (b) => b.creditDebit }, { placeholder: 'CRDT oder DBIT' }),
+  {
+    ...formField('creditDebit', { accessor: 'creditDebit', title: 'S/H', render: (b) => b.creditDebit }, {}),
+    type: 'custom',
+    defaultValue: 'CRDT' as Booking['creditDebit'],
+    render: (values, setValues, _hideButtons, validation) => (
+      <Radio.Group
+        label="S/H"
+        error={validation?.error}
+        value={values.creditDebit || 'CRDT'}
+        onChange={(value) => setValues({ creditDebit: value as Booking['creditDebit'] })}
+      >
+        <Group mt="xs" gap="lg">
+          <Radio value="CRDT" label="CRDT (Eingang)" />
+          <Radio value="DBIT" label="DBIT (Ausgang)" />
+        </Group>
+      </Radio.Group>
+    ),
+  },
   formField('amount', { accessor: 'amount', title: 'Betrag', textAlign: 'right', render: (b) => <Money amount={b.amount} currency={b.currency} /> }, { type: 'number', required: true }),
 ]
 
@@ -108,7 +125,11 @@ export function Accounts() {
           disabled: (records) => records.length === 0,
         },
       ]}
-      rowExpansion={{ content: (record) => <Bookings account={record} /> }}
+      rowExpansion={{ content: (record) => (
+        <Box py="md">
+          <Bookings account={record} />
+        </Box>
+      ) }}
     />
   )
 }

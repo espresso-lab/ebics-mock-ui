@@ -5,7 +5,7 @@ COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 COPY ui/package.json ./ui/
-RUN npm ci
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN npm run build

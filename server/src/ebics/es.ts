@@ -1,11 +1,6 @@
 import { aesDecryptInflate, verifyA006 } from './crypto.js'
 import { byLocalName, parseXml, textOf } from './xml.js'
 
-/**
- * Verifies the bank-technical electronic signature (ES, A006) over the uploaded order data.
- * Returns true/false when an A006 signature is present and checkable, or null when the
- * signature is absent or cannot be evaluated (then the order is stored as "not verified").
- */
 export function verifyOrderSignature(
   encryptedSignatureData: Buffer,
   transactionKey: Buffer,

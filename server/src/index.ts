@@ -10,5 +10,4 @@ seedDemoData(store)
 
 const app = await createApp(store)
 await app.listen({ port: config.port, host: config.host })
-// eslint-disable-next-line no-console
 console.log(`EBICS mock bank listening on http://${config.host}:${config.port}${config.ebicsPath}`)

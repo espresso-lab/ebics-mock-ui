@@ -66,7 +66,7 @@ function handleHia(store: Store, parsed: ParsedRequest): HandlerResult {
 function handleHpb(store: Store, parsed: ParsedRequest): HandlerResult {
   const participant = store.findOrCreateParticipant(parsed.hostId || config.hostId, parsed.partnerId, parsed.userId)
   const clientE002 = store.getParticipantKey(participant.id, 'E002')
-  if (!clientE002) {
+  if (!clientE002 || !participant.activated) {
     protocol(store, participant.id, 'HPB', RETURN.INVALID_USER_OR_USER_STATE)
     return result(buildKeyManagementResponse(RETURN.INVALID_USER_OR_USER_STATE), participant.id, 'HPB', '', RETURN.INVALID_USER_OR_USER_STATE, null)
   }

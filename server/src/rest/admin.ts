@@ -55,7 +55,16 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     store.setInitState(participant.id, 'ini_state', 'DONE')
     store.setInitState(participant.id, 'hia_state', 'DONE')
     store.setHpbState(participant.id, 'DELIVERED')
+    store.setParticipantActivated(participant.id, true)
     return store.getParticipant(participant.id)
+  })
+
+  app.put('/api/participants/:id/activation', (req, reply) => {
+    const id = (req.params as { id: string }).id
+    if (!store.getParticipant(id)) return reply.code(404).send({ error: 'participant not found' })
+    const body = (req.body ?? {}) as { active?: boolean }
+    store.setParticipantActivated(id, Boolean(body.active))
+    return store.getParticipant(id)
   })
 
   app.get('/api/accounts', () => store.listAccounts())

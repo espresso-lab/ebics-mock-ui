@@ -51,6 +51,15 @@ export class Store {
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
     this.db.exec(SCHEMA)
+    this.migrate()
+  }
+
+  private migrate() {
+    const columns = this.db.prepare('PRAGMA table_info(participant)').all() as { name: string }[]
+    if (!columns.some((c) => c.name === 'activated')) {
+      this.db.exec('ALTER TABLE participant ADD COLUMN activated INTEGER NOT NULL DEFAULT 0')
+      this.db.exec("UPDATE participant SET activated = 1 WHERE hpb_state = 'DELIVERED'")
+    }
   }
 
   close() {
@@ -114,6 +123,10 @@ export class Store {
 
   setHpbState(id: string, state: HpbState) {
     this.db.prepare('UPDATE participant SET hpb_state = ? WHERE id = ?').run(state, id)
+  }
+
+  setParticipantActivated(id: string, activated: boolean) {
+    this.db.prepare('UPDATE participant SET activated = ? WHERE id = ?').run(activated ? 1 : 0, id)
   }
 
   setUserName(id: string, userName: string) {
@@ -552,6 +565,7 @@ function mapParticipant(r: Row): Participant {
     iniState: r.ini_state as InitState,
     hiaState: r.hia_state as InitState,
     hpbState: r.hpb_state as HpbState,
+    activated: r.activated === 1,
     createdAt: str(r.created_at),
   }
 }

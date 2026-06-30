@@ -7,6 +7,7 @@ export interface Participant {
   iniState: 'NEW' | 'RECEIVED' | 'DONE'
   hiaState: 'NEW' | 'RECEIVED' | 'DONE'
   hpbState: 'PENDING' | 'DELIVERED'
+  activated: boolean
   createdAt: string
 }
 

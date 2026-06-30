@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS participant (
   ini_state TEXT NOT NULL DEFAULT 'NEW',
   hia_state TEXT NOT NULL DEFAULT 'NEW',
   hpb_state TEXT NOT NULL DEFAULT 'PENDING',
+  activated INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   UNIQUE (host_id, partner_id, user_id)
 );

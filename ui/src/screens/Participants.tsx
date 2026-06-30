@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Button, Group, MultiSelect, Stack, Text } from '@mantine/core'
+import { Button, Group, MultiSelect, Stack, Switch, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconUserPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -65,6 +65,18 @@ function SimulateParticipant() {
   )
 }
 
+function ActivationSwitch({ participant }: { participant: Participant }) {
+  const queryClient = useQueryClient()
+
+  const toggle = (active: boolean) => {
+    apiPut(`/api/participants/${participant.id}/activation`, { active })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['participants'] }))
+      .catch((error) => notifications.show({ color: 'red', message: `Freischaltung fehlgeschlagen: ${String(error)}` }))
+  }
+
+  return <Switch checked={participant.activated} onChange={(event) => toggle(event.currentTarget.checked)} />
+}
+
 function KeyList({ participantId }: { participantId: string }) {
   const { data } = useApiQuery<ParticipantKey[]>(['participant-keys', participantId], `/api/participants/${participantId}/keys`)
   if (!data?.length) return <Text size="sm" c="dimmed" p="sm">Noch keine Schlüssel empfangen.</Text>
@@ -88,6 +100,7 @@ const fields: Field<Participant>[] = [
   listField('ini', { accessor: 'iniState', title: 'INI', render: (r) => <StateBadge value={r.iniState} /> }),
   listField('hia', { accessor: 'hiaState', title: 'HIA', render: (r) => <StateBadge value={r.hiaState} /> }),
   listField('hpb', { accessor: 'hpbState', title: 'HPB', render: (r) => <StateBadge value={r.hpbState} /> }),
+  listField('activated', { accessor: 'activated', title: 'INI-Brief', render: (r) => <ActivationSwitch participant={r} /> }),
   listField('createdAt', { accessor: 'createdAt', title: 'Angelegt', render: (r) => fmtDateTime(r.createdAt) }),
 ]
 
@@ -95,7 +108,7 @@ export function Participants() {
   return (
     <DataTable<Participant>
       title="Teilnehmer"
-      titleHint="Die Bank legt den Teilnehmer mit Host-/Kunden-/Teilnehmer-ID an und übergibt diese Parameter an den Kunden; dessen banking-service initialisiert ihn dann per INI/HIA/HPB (Status NEW → DONE). »Test-Teilnehmer« simuliert den ganzen Handshake intern."
+      titleHint="Die Bank legt den Teilnehmer mit Host-/Kunden-/Teilnehmer-ID an und übergibt diese Parameter an den Kunden; dessen banking-service initialisiert ihn dann per INI/HIA/HPB (Status NEW → DONE). HPB liefert die Bankschlüssel aber erst, wenn der INI-Brief des Teilnehmers eingegangen ist — dafür den Schalter »INI-Brief« aktivieren. »Test-Teilnehmer« simuliert den ganzen Handshake inkl. Freischaltung intern."
       queryKey={['participants']}
       apiPath="/api/participants"
       createButtonText="Teilnehmer anlegen"

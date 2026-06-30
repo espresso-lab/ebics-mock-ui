@@ -164,6 +164,13 @@ describe('EBICS handshake + flows (in-process)', () => {
     expect(participant.hiaState).toBe('DONE')
   })
 
+  it('rejects HPB until the INI letter is registered (participant activated)', async () => {
+    const participant = store.listParticipants()[0]!
+    expect(participant.activated).toBe(false)
+    expect(textOf(parseXml(await post(hpbRequest())), 'ReturnCode')).toBe('091002')
+    store.setParticipantActivated(participant.id, true)
+  })
+
   it('delivers bank keys via HPB that the client can decrypt', async () => {
     const decrypted = decode(await post(hpbRequest())).toString('utf8')
     const orderDoc = parseXml(decrypted)

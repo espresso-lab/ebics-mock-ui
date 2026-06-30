@@ -12,6 +12,7 @@ export interface Participant {
   iniState: InitState
   hiaState: InitState
   hpbState: HpbState
+  activated: boolean
   createdAt: string
 }
 

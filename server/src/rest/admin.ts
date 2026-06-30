@@ -1,8 +1,10 @@
+import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import type { Account, Booking } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { generateCamt053 } from '../ebics/camt.js'
 import { parseCamtBookings } from '../ebics/camtImport.js'
+import { ebicsPublicKeyDigest, generateRsaKeyPair } from '../ebics/crypto.js'
 
 function signed(booking: Booking): number {
   return booking.creditDebit === 'CRDT' ? Number(booking.amount) : -Number(booking.amount)
@@ -16,6 +18,29 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     store.listParticipantKeys((req.params as { id: string }).id).map((k) => ({ id: `${k.participantId}-${k.type}`, ...k })),
   )
   app.get('/api/bank-keys', () => store.listBankKeys().map((k) => ({ id: k.type, ...k })))
+
+  app.post('/api/participants', (req, reply) => {
+    const body = (req.body ?? {}) as { hostId?: string; partnerId?: string; userId?: string }
+    if (!body.partnerId || !body.userId) return reply.code(400).send({ error: 'partnerId and userId are required' })
+    const hostId = body.hostId || process.env.EBICS_HOST_ID || 'MOCKBANK'
+    return store.findOrCreateParticipant(hostId, body.partnerId, body.userId)
+  })
+
+  app.post('/api/participants/simulate', (req) => {
+    const body = (req.body ?? {}) as { hostId?: string; partnerId?: string; userId?: string }
+    const suffix = randomBytes(3).toString('hex').toUpperCase()
+    const hostId = body.hostId || process.env.EBICS_HOST_ID || 'MOCKBANK'
+    const participant = store.findOrCreateParticipant(hostId, body.partnerId || `MV${suffix}`, body.userId || `USER${suffix}`)
+    for (const type of ['A006', 'X002', 'E002'] as const) {
+      const { publicKeyPem } = generateRsaKeyPair()
+      store.setParticipantKey(participant.id, type, publicKeyPem, ebicsPublicKeyDigest(publicKeyPem).toString('hex'))
+    }
+    store.setUserName(participant.id, 'Test-Teilnehmer')
+    store.setInitState(participant.id, 'ini_state', 'DONE')
+    store.setInitState(participant.id, 'hia_state', 'DONE')
+    store.setHpbState(participant.id, 'DELIVERED')
+    return store.getParticipant(participant.id)
+  })
 
   app.get('/api/accounts', () => store.listAccounts())
   app.post('/api/accounts', (req) => {

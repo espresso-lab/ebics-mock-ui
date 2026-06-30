@@ -1,13 +1,11 @@
 FROM node:22-bookworm AS build
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 COPY ui/package.json ./ui/
-# Resolve platform-correct native optional deps (rolldown) — the committed lock is
-# platform-incomplete (npm optional-deps bug npm/cli#4828), so install without it.
-RUN npm install --no-audit --no-fund
+RUN npm ci
 
 COPY . .
 RUN npm run build

@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react'
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 import { Shell } from './Shell'
 import { Accounts } from './screens/Accounts'
@@ -12,18 +11,15 @@ import { Veu } from './screens/Veu'
 
 const rootRoute = createRootRoute({ component: Shell })
 
-const screen = <P extends string>(path: P, component: ComponentType) =>
-  createRoute({ getParentRoute: () => rootRoute, path, component })
-
 const routeTree = rootRoute.addChildren([
-  screen('/', Participants),
-  screen('/accounts', Accounts),
-  screen('/orders', Orders),
-  screen('/statements', Statements),
-  screen('/veu', Veu),
-  screen('/protocol', Protocol),
-  screen('/exchanges', Exchanges),
-  screen('/bank-keys', BankKeys),
+  createRoute({ getParentRoute: () => rootRoute, path: '/', component: Participants }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/accounts', component: Accounts }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/orders', component: Orders }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/statements', component: Statements }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/veu', component: Veu }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/protocol', component: Protocol }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/exchanges', component: Exchanges }),
+  createRoute({ getParentRoute: () => rootRoute, path: '/bank-keys', component: BankKeys }),
 ])
 
 export const router = createRouter({ routeTree })

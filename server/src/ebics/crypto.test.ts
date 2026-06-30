@@ -36,6 +36,14 @@ describe('crypto', () => {
     expect(verifyA006(signer.publicKeyPem, data, signature)).toBe(true)
   })
 
+  it('canonicalises OS-specific chars (CR/LF/EOF) before hashing, like the EBICS A006 ES', () => {
+    const signer = generateRsaKeyPair()
+    const stripped = Buffer.from('<Document>  <A>1</A>  <B>2</B></Document>', 'utf8')
+    const prettyPrinted = Buffer.from('<Document>\n  <A>1</A>\r\n  <B>2</B>\n</Document>', 'utf8')
+    const signatureOverStripped = signA006(signer.privateKeyPem, stripped)
+    expect(verifyA006(signer.publicKeyPem, prettyPrinted, signatureOverStripped)).toBe(true)
+  })
+
   it('rejects an A006 signature over tampered data', () => {
     const signer = generateRsaKeyPair()
     const signature = signA006(signer.privateKeyPem, Buffer.from('original', 'utf8'))

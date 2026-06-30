@@ -59,8 +59,12 @@ export function ebicsPublicKeyDigest(pem: string): Buffer {
   return createHash('sha256').update(`${e} ${m}`, 'ascii').digest()
 }
 
+function removeOsSpecificChars(data: Buffer): Buffer {
+  return Buffer.from(data.filter((b) => b !== 0x0d && b !== 0x0a && b !== 0x1a))
+}
+
 export function signA006(privateKeyPem: string, data: Buffer): Buffer {
-  const digest = createHash('sha256').update(data).digest()
+  const digest = createHash('sha256').update(removeOsSpecificChars(data)).digest()
   return signRaw('sha256', digest, {
     key: privateKeyFromPem(privateKeyPem),
     padding: constants.RSA_PKCS1_PSS_PADDING,
@@ -69,7 +73,7 @@ export function signA006(privateKeyPem: string, data: Buffer): Buffer {
 }
 
 export function verifyA006(publicKeyPem: string, data: Buffer, signature: Buffer): boolean {
-  const digest = createHash('sha256').update(data).digest()
+  const digest = createHash('sha256').update(removeOsSpecificChars(data)).digest()
   return verifyRaw(
     'sha256',
     digest,

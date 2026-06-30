@@ -137,6 +137,22 @@ describe('Store', () => {
     expect(updated.remittance).toBe('b')
   })
 
+  it('binds accounts to a participant and cascades on account delete', () => {
+    const store = newStore()
+    const p = store.findOrCreateParticipant('MOCKBANK', 'MV1', 'USER1')
+    const a1 = store.createAccount({ partnerId: 'MV1', iban: 'DE1', bic: '', currency: 'EUR', name: 'A1', balance: '0.00' })
+    const a2 = store.createAccount({ partnerId: 'MV1', iban: 'DE2', bic: '', currency: 'EUR', name: 'A2', balance: '0.00' })
+
+    store.setParticipantAccounts(p.id, [a1.id, a2.id])
+    expect([...store.listParticipantAccountIds(p.id)].sort()).toEqual([a1.id, a2.id].sort())
+
+    store.setParticipantAccounts(p.id, [a1.id])
+    expect(store.listParticipantAccounts(p.id).map((a) => a.iban)).toEqual(['DE1'])
+
+    store.deleteAccount(a1.id)
+    expect(store.listParticipantAccountIds(p.id)).toHaveLength(0)
+  })
+
   it('records exchanges and protocol entries', () => {
     const store = newStore()
     store.addExchange({

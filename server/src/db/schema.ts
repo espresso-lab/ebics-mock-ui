@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS account (
   balance TEXT NOT NULL DEFAULT '0.00'
 );
 
+CREATE TABLE IF NOT EXISTS participant_account (
+  participant_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  PRIMARY KEY (participant_id, account_id),
+  FOREIGN KEY (participant_id) REFERENCES participant(id) ON DELETE CASCADE,
+  FOREIGN KEY (account_id) REFERENCES account(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS booking (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL,

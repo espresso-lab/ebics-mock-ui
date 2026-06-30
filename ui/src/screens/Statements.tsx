@@ -34,6 +34,7 @@ export function Statements() {
       queryKey={['statements']}
       apiPath="/api/statements"
       fields={fields}
+      selection
       mobileCards
       defaultSort={{ field: 'createdAt', direction: 'desc' }}
     />

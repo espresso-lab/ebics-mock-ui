@@ -168,6 +168,33 @@ export class Store {
     return this.getAccount(id)!
   }
 
+  listParticipantAccountIds(participantId: string): string[] {
+    return (
+      this.db.prepare('SELECT account_id FROM participant_account WHERE participant_id = ?').all(participantId) as Row[]
+    ).map((r) => str(r.account_id))
+  }
+
+  listParticipantAccounts(participantId: string): Account[] {
+    return (
+      this.db
+        .prepare(
+          `SELECT a.* FROM account a
+             JOIN participant_account pa ON pa.account_id = a.id
+             WHERE pa.participant_id = ? ORDER BY a.iban`,
+        )
+        .all(participantId) as Row[]
+    ).map(mapAccount)
+  }
+
+  setParticipantAccounts(participantId: string, accountIds: string[]) {
+    const tx = this.db.transaction((ids: string[]) => {
+      this.db.prepare('DELETE FROM participant_account WHERE participant_id = ?').run(participantId)
+      const insert = this.db.prepare('INSERT OR IGNORE INTO participant_account (participant_id, account_id) VALUES (?, ?)')
+      ids.forEach((id) => insert.run(participantId, id))
+    })
+    tx(accountIds)
+  }
+
   listBookings(accountId: string): Booking[] {
     return (
       this.db.prepare('SELECT * FROM booking WHERE account_id = ? ORDER BY book_date, created_at').all(accountId) as Row[]

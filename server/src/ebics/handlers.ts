@@ -194,13 +194,14 @@ function handleReceipt(store: Store, parsed: ParsedRequest): HandlerResult {
 }
 
 function htdContext(store: Store, participant: Participant) {
+  const bound = store.listParticipantAccounts(participant.id)
   return {
     hostId: participant.hostId,
     partnerId: participant.partnerId,
     userId: participant.userId,
     userName: participant.userName || participant.userId,
     partnerName: participant.partnerId,
-    accounts: store.listAccounts(),
+    accounts: bound.length > 0 ? bound : store.listAccounts(),
   }
 }
 

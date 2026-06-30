@@ -17,6 +17,13 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
   app.get('/api/participants/:id/keys', (req) =>
     store.listParticipantKeys((req.params as { id: string }).id).map((k) => ({ id: `${k.participantId}-${k.type}`, ...k })),
   )
+  app.get('/api/participants/:id/accounts', (req) => store.listParticipantAccountIds((req.params as { id: string }).id))
+  app.put('/api/participants/:id/accounts', (req) => {
+    const id = (req.params as { id: string }).id
+    const body = (req.body ?? {}) as { accountIds?: string[] }
+    store.setParticipantAccounts(id, Array.isArray(body.accountIds) ? body.accountIds : [])
+    return store.listParticipantAccountIds(id)
+  })
   app.get('/api/bank-keys', () => store.listBankKeys().map((k) => ({ id: k.type, ...k })))
 
   app.post('/api/participants', (req, reply) => {

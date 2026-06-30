@@ -21,6 +21,7 @@ export function Veu() {
       queryKey={['veu']}
       apiPath="/api/veu"
       fields={fields}
+      selection
       mobileCards
       autoPoll={5000}
       defaultSort={{ field: 'createdAt', direction: 'desc' }}

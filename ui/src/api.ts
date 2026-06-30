@@ -17,6 +17,16 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`)
+  return res.json() as Promise<T>
+}
+
 export function useApiQuery<T>(key: (string | number)[], path: string, refetchInterval?: number) {
   return useQuery({ queryKey: key, queryFn: () => apiGet<T>(path), refetchInterval })
 }

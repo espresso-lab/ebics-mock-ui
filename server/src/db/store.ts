@@ -334,6 +334,12 @@ export class Store {
     ).map(mapStatement)
   }
 
+  listStatementsInRange(from: string, to: string): Statement[] {
+    return (
+      this.db.prepare('SELECT * FROM statement WHERE from_date <= ? AND to_date >= ? ORDER BY created_at').all(to, from) as Row[]
+    ).map(mapStatement)
+  }
+
   markStatementsFetched(ids: string[]) {
     const stmt = this.db.prepare("UPDATE statement SET status = 'FETCHED' WHERE id = ?")
     const tx = this.db.transaction((list: string[]) => list.forEach((id) => stmt.run(id)))

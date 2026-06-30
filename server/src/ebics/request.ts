@@ -34,6 +34,8 @@ export interface ParsedRequest {
   userId: string
   orderType: string
   btf?: Btf
+  dateStart?: string
+  dateEnd?: string
   phase: Phase
   transactionId: string
   segmentNumber: number
@@ -94,6 +96,9 @@ export function parseRequest(xml: string): ParsedRequest {
     (orderDetails ? textOf(orderDetails, 'AdminOrderType') : '') || (orderDetails ? textOf(orderDetails, 'OrderType') : '')
 
   const btf = parseBtf(orderDetails)
+  const dateRange = orderDetails ? byLocalName(orderDetails, 'DateRange') : undefined
+  const dateStart = dateRange ? textOf(dateRange, 'Start').slice(0, 10) : ''
+  const dateEnd = dateRange ? textOf(dateRange, 'End').slice(0, 10) : ''
   const orderType = adminOrderType || (root === 'ebicsHEVRequest' ? 'HEV' : '')
 
   const mutable = header ? byLocalName(header, 'mutable') : undefined
@@ -110,6 +115,8 @@ export function parseRequest(xml: string): ParsedRequest {
     userId: staticHeader ? textOf(staticHeader, 'UserID') : '',
     orderType: btf ? (root === 'ebicsRequest' && phase !== 'Initialisation' ? orderType : orderType) : orderType,
     btf,
+    dateStart: dateStart || undefined,
+    dateEnd: dateEnd || undefined,
     phase,
     transactionId: textOf(doc, 'TransactionID'),
     segmentNumber: Number(textOf(doc, 'SegmentNumber') || '0'),

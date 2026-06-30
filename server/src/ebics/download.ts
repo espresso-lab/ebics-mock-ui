@@ -20,7 +20,10 @@ export function handleBtdInitialisation(
 
   if (!isStatement) return noDownloadData(store, participant, parsed.orderType)
 
-  const statements = store.listAvailableStatements()
+  const dated = Boolean(parsed.dateStart && parsed.dateEnd)
+  const statements = dated
+    ? store.listStatementsInRange(parsed.dateStart!, parsed.dateEnd!)
+    : store.listAvailableStatements()
   if (!statements.length) return noDownloadData(store, participant, parsed.orderType)
 
   const files = statements.map((statement, index) => ({
@@ -29,7 +32,8 @@ export function handleBtdInitialisation(
   }))
   const container = parsed.btf?.container === 'ZIP' || !parsed.btf?.container
   const payload = container ? zipStored(files) : files[0]!.content
-  return respond(participant, statements.map((s) => s.id), payload)
+  const consumeIds = dated ? [] : statements.map((s) => s.id)
+  return respond(participant, consumeIds, payload)
 }
 
 function noDownloadData(store: Store, participant: Participant, orderType: string): HandlerResult {

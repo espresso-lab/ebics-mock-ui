@@ -211,6 +211,32 @@ describe('EBICS handshake + flows (in-process)', () => {
     expect(textOf(byLocalName(doc, 'body')!, 'ReturnCode')).toBe('090005')
   })
 
+  it('re-delivers already-fetched statements when a DateRange is sent (GRENKE-style dated read)', async () => {
+    const account = store.listAccounts()[0]!
+    store.createStatement({
+      accountId: account.id,
+      iban: account.iban,
+      fromDate: '2026-06-01',
+      toDate: '2026-06-30',
+      fileName: 'camt053-dated.xml',
+      content: '<Document>dated-statement-MARKER</Document>',
+    })
+    store.markStatementsFetched(store.listStatements().map((s) => s.id))
+
+    expect(textOf(byLocalName(parseXml(await post(downloadInit('BTD', btdCamtParams))), 'body')!, 'ReturnCode')).toBe('090005')
+
+    const datedParams =
+      `<BTDOrderParams><Service><ServiceName>EOP</ServiceName><Scope>DE</Scope><Container containerType="ZIP"/><MsgName>camt.053</MsgName></Service>` +
+      `<DateRange><Start>2026-06-01</Start><End>2026-06-30</End></DateRange></BTDOrderParams>`
+
+    const response = await post(downloadInit('BTD', datedParams))
+    expect(decode(response).toString('binary')).toContain('dated-statement-MARKER')
+    await post(receipt(textOf(parseXml(response), 'TransactionID')))
+
+    const again = await post(downloadInit('BTD', datedParams))
+    expect(decode(again).toString('binary')).toContain('dated-statement-MARKER')
+  })
+
   it('accepts a BTU upload, verifies the A006 signature and parses the pain.001', async () => {
     const tek = randomBytes(16)
     const orderData = aesEncryptDeflate(Buffer.from(painDocument, 'utf8'), tek)

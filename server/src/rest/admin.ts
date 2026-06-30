@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
-import type { Account, Booking } from '@ebics-mock/shared'
+import type { Account, Booking, CreditDebit } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { generateCamt053 } from '../ebics/camt.js'
 import { parseCamtBookings } from '../ebics/camtImport.js'
@@ -8,6 +8,15 @@ import { ebicsPublicKeyDigest, generateRsaKeyPair } from '../ebics/crypto.js'
 
 function signed(booking: Booking): number {
   return booking.creditDebit === 'CRDT' ? Number(booking.amount) : -Number(booking.amount)
+}
+
+function creditDebitOf(value: unknown): CreditDebit {
+  return value === 'DBIT' ? 'DBIT' : 'CRDT'
+}
+
+function moneyOf(value: unknown): string {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric.toFixed(2) : '0.00'
 }
 
 export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
@@ -50,16 +59,21 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
   })
 
   app.get('/api/accounts', () => store.listAccounts())
-  app.post('/api/accounts', (req) => {
-    const body = req.body as { iban: string; bic?: string; currency?: string; name?: string; balance?: string; partnerId?: string }
+  app.post('/api/accounts', (req, reply) => {
+    const body = req.body as { iban?: string; bic?: string; currency?: string; name?: string; balance?: string; partnerId?: string }
+    if (!body.iban || !body.iban.trim()) return reply.code(400).send({ error: 'iban is required' })
     return store.createAccount({
       partnerId: body.partnerId ?? 'MV126086',
-      iban: body.iban,
+      iban: body.iban.trim(),
       bic: body.bic ?? '',
       currency: body.currency ?? 'EUR',
       name: body.name ?? '',
-      balance: body.balance ?? '0.00',
+      balance: moneyOf(body.balance ?? '0.00'),
     })
+  })
+  app.get('/api/accounts/:id', (req, reply) => {
+    const account = store.getAccount((req.params as { id: string }).id)
+    return account ?? reply.code(404).send({ error: 'account not found' })
   })
   app.put('/api/accounts/:id', (req, reply) => {
     const updated = store.updateAccount((req.params as { id: string }).id, req.body as Partial<Account>)
@@ -75,17 +89,25 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
       accountId: id,
       bookDate: b.bookDate ?? new Date().toISOString().slice(0, 10),
       valueDate: b.valueDate ?? b.bookDate ?? new Date().toISOString().slice(0, 10),
-      amount: b.amount ?? '0.00',
+      amount: moneyOf(b.amount),
       currency: b.currency ?? account.currency,
-      creditDebit: b.creditDebit ?? 'CRDT',
+      creditDebit: creditDebitOf(b.creditDebit),
       remittance: b.remittance ?? '',
       counterpartyName: b.counterpartyName ?? '',
       counterpartyIban: b.counterpartyIban ?? '',
     })
   })
 
+  app.get('/api/accounts/:accountId/bookings/:id', (req, reply) => {
+    const booking = store.getBooking((req.params as { id: string }).id)
+    return booking ?? reply.code(404).send({ error: 'booking not found' })
+  })
   app.put('/api/accounts/:accountId/bookings/:id', (req, reply) => {
-    const updated = store.updateBooking((req.params as { id: string }).id, req.body as Partial<Booking>)
+    const body = req.body as Partial<Booking>
+    const patch: Partial<Booking> = { ...body }
+    if (body.creditDebit !== undefined) patch.creditDebit = creditDebitOf(body.creditDebit)
+    if (body.amount !== undefined) patch.amount = moneyOf(body.amount)
+    const updated = store.updateBooking((req.params as { id: string }).id, patch)
     return updated ?? reply.code(404).send({ error: 'booking not found' })
   })
 

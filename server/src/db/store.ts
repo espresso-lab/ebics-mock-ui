@@ -201,6 +201,11 @@ export class Store {
     ).map(mapBooking)
   }
 
+  getBooking(id: string): Booking | undefined {
+    const r = this.db.prepare('SELECT * FROM booking WHERE id = ?').get(id) as Row | undefined
+    return r ? mapBooking(r) : undefined
+  }
+
   createBooking(input: Omit<Booking, 'id'> & { statementId?: string | null }): Booking {
     const id = randomUUID()
     this.db

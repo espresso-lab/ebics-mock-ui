@@ -51,7 +51,15 @@ export function SignatureBadge({ value }: { value: boolean | null }) {
 }
 
 export function Money({ amount, currency }: { amount: string; currency: string }) {
-  const value = Number(amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const numeric = Number(amount)
+  if (!Number.isFinite(numeric)) {
+    return (
+      <Text size="sm" ta="right" c="dimmed">
+        —
+      </Text>
+    )
+  }
+  const value = numeric.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return (
     <Text size="sm" ta="right" ff="monospace">
       {value} {currency}

@@ -63,6 +63,7 @@ function Bookings({ account }: { account: Account }) {
       createButtonText="Buchung anlegen"
       buttons={[<CamtImport key="camt-import" accountId={account.id} />]}
       fields={bookingFields}
+      selection
       mobileCards
       defaultSort={{ field: 'bookDate', direction: 'desc' }}
     />

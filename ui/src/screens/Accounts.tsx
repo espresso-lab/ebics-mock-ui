@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Box, Button, FileButton, Group, Radio } from '@mantine/core'
+import { Box, Button, FileButton, Group, Modal, Radio, Stack, Text } from '@mantine/core'
+import { DateInput } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
 import { IconFileText, IconUpload } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -91,39 +92,80 @@ const fields: Field<Account>[] = [
 
 export function Accounts() {
   const queryClient = useQueryClient()
+  const [statementAccounts, setStatementAccounts] = useState<Account[] | null>(null)
+  const [fromDate, setFromDate] = useState<string | null>(null)
+  const [toDate, setToDate] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
 
-  const generateStatements = async (accounts: Account[]) => {
-    for (const account of accounts) {
-      await apiPost(`/api/accounts/${account.id}/statements`, {})
+  const closeModal = () => {
+    setStatementAccounts(null)
+    setFromDate(null)
+    setToDate(null)
+  }
+
+  const generateStatements = async () => {
+    if (!statementAccounts) return
+    setGenerating(true)
+    try {
+      for (const account of statementAccounts) {
+        await apiPost(`/api/accounts/${account.id}/statements`, {
+          ...(fromDate ? { fromDate } : {}),
+          ...(toDate ? { toDate } : {}),
+        })
+      }
+      await queryClient.invalidateQueries({ queryKey: ['statements'] })
+      notifications.show({ color: 'teal', message: `camt.053 für ${statementAccounts.length} Konto/Konten erzeugt und zum Abruf freigegeben.` })
+      closeModal()
+    } catch (error) {
+      notifications.show({ color: 'red', message: `Auszug fehlgeschlagen: ${String(error)}` })
+    } finally {
+      setGenerating(false)
     }
-    await queryClient.invalidateQueries({ queryKey: ['statements'] })
-    notifications.show({ color: 'teal', message: `camt.053 für ${accounts.length} Konto/Konten erzeugt und zum Abruf freigegeben.` })
   }
 
   return (
-    <DataTable<Account>
-      title="Konten & Umsätze"
-      titleHint="Konten der Mock-Bank. Auswählen und »Auszug erzeugen« baut einen camt.053 aus den Umsätzen, den der banking-service per BTD abholt."
-      queryKey={['accounts']}
-      apiPath="/api/accounts"
-      createButtonText="Konto anlegen"
-      fields={fields}
-      selection
-      mobileCards
-      defaultSort={{ field: 'iban', direction: 'asc' }}
-      actions={[
-        {
-          label: 'Auszug erzeugen',
-          icon: <IconFileText size={16} />,
-          onClick: generateStatements,
-          disabled: (records) => records.length === 0,
-        },
-      ]}
-      rowExpansion={{ content: (record) => (
-        <Box py="md">
-          <Bookings account={record} />
-        </Box>
-      ) }}
-    />
+    <>
+      <DataTable<Account>
+        title="Konten & Umsätze"
+        titleHint="Konten der Mock-Bank. Auswählen und »Auszug erzeugen« baut einen camt.053 aus den Umsätzen, den der banking-service per BTD abholt."
+        queryKey={['accounts']}
+        apiPath="/api/accounts"
+        createButtonText="Konto anlegen"
+        fields={fields}
+        selection
+        mobileCards
+        defaultSort={{ field: 'iban', direction: 'asc' }}
+        actions={[
+          {
+            label: 'Auszug erzeugen',
+            icon: <IconFileText size={16} />,
+            onClick: (accounts) => setStatementAccounts(accounts),
+            disabled: (records) => records.length === 0,
+          },
+        ]}
+        rowExpansion={{ content: (record) => (
+          <Box py="md">
+            <Bookings account={record} />
+          </Box>
+        ) }}
+      />
+      <Modal opened={statementAccounts !== null} onClose={closeModal} title="Kontoauszug erzeugen" centered>
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Zeitraum für den camt.053. Leer lassen = alle Buchungen des Kontos.
+          </Text>
+          <DateInput label="Von" placeholder="erste Buchung" valueFormat="DD.MM.YYYY" clearable value={fromDate} onChange={setFromDate} />
+          <DateInput label="Bis" placeholder="letzte Buchung" valueFormat="DD.MM.YYYY" clearable value={toDate} onChange={setToDate} />
+          <Group justify="flex-end" mt="sm">
+            <Button variant="default" onClick={closeModal}>
+              Abbrechen
+            </Button>
+            <Button onClick={generateStatements} loading={generating}>
+              Erzeugen
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
   )
 }

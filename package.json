@@ -1,0 +1,21 @@
+{
+  "name": "ebics-mock",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "ui"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,ui -c blue,magenta \"npm -w @ebics-mock/server run dev\" \"npm -w ui run dev\"",
+    "dev:server": "npm -w @ebics-mock/server run dev",
+    "dev:ui": "npm -w ui run dev",
+    "build": "npm -w @ebics-mock/shared run build && npm -w @ebics-mock/server run build && npm -w ui run build",
+    "test": "npm -w @ebics-mock/server run test",
+    "lint": "npm -w ui run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

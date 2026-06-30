@@ -1,0 +1,36 @@
+image:
+  repository: ghcr.io/jviets/ebics-mock-ui
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
+# EBICS Host-ID announced in HEV/HPB/HTD
+hostId: MOCKBANK
+
+service:
+  port: 8088
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 96Mi
+  limits:
+    memory: 256Mi
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: retain-local-path
+
+ingress:
+  enabled: true
+  className: traefik
+  host: ebics.viets.dev
+  clusterIssuer: letsencrypt-prod
+  # Traefik OIDC (Pocket ID) middleware that protects the UI + admin API.
+  # The EBICS endpoint below is served by a SECOND ingress WITHOUT this middleware,
+  # so EBICS clients (no Pocket ID) can reach it.
+  oidcMiddleware: kube-system-oidc-auth@kubernetescrd
+  ebicsPath: /ebicsweb

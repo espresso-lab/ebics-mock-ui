@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.git
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+**/*.log
+**/.DS_Store
+**/.idea
+.github
+helm
+home-lab

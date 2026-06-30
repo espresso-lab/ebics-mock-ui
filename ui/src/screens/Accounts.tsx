@@ -31,7 +31,7 @@ function CamtImport({ accountId }: { accountId: string }) {
   return (
     <FileButton accept=".xml,text/xml,application/xml" onChange={onFile}>
       {(props) => (
-        <Button {...props} variant="light" size="xs" leftSection={<IconUpload size={14} />} loading={loading}>
+        <Button {...props} variant="default" leftSection={<IconUpload size={16} />} loading={loading}>
           camt importieren
         </Button>
       )}

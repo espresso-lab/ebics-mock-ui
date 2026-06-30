@@ -17,6 +17,16 @@ export async function createApp(store: Store): Promise<FastifyInstance> {
     (_req, body, done) => done(null, body),
   )
 
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    const text = typeof body === 'string' ? body.trim() : ''
+    if (!text) return done(null, undefined)
+    try {
+      done(null, JSON.parse(text))
+    } catch (error) {
+      done(error as Error, undefined)
+    }
+  })
+
   app.post(config.ebicsPath, async (req, reply) => {
     const xml = typeof req.body === 'string' ? req.body : ''
     const { xml: response } = handleEbics(store, xml)

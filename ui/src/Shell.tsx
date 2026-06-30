@@ -73,9 +73,8 @@ export function Shell() {
                 <Tooltip label={copied ? 'Kopiert!' : bankUrl} withArrow>
                   <Button
                     variant="default"
-                    size="xs"
                     onClick={copy}
-                    leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                    leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
                   >
                     Bank-URL
                   </Button>

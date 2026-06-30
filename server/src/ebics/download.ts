@@ -38,6 +38,7 @@ function noDownloadData(store: Store, participant: Participant, orderType: strin
   const xml = buildEbicsResponse({
     phase: 'Initialisation',
     bankX002Priv: bank.privateKeyPem,
+    headerReturnCode: RETURN.OK,
     returnCode: RETURN.NO_DOWNLOAD_DATA,
   })
   return { xml, participantId: participant.id, orderType, phase: 'Initialisation', returnCode: RETURN.NO_DOWNLOAD_DATA, transactionId: null }

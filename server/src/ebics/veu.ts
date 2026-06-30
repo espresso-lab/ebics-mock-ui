@@ -122,6 +122,6 @@ function ok(store: Store, participant: Participant, orderType: string): HandlerR
 function veuNoData(store: Store, participant: Participant, orderType: string): HandlerResult {
   protocol(store, participant.id, orderType, RETURN.NO_DOWNLOAD_DATA)
   const bank = requireBankKey(store, 'X002')
-  const xml = buildEbicsResponse({ phase: 'Initialisation', bankX002Priv: bank.privateKeyPem, returnCode: RETURN.NO_DOWNLOAD_DATA })
+  const xml = buildEbicsResponse({ phase: 'Initialisation', bankX002Priv: bank.privateKeyPem, headerReturnCode: RETURN.OK, returnCode: RETURN.NO_DOWNLOAD_DATA })
   return { xml, participantId: participant.id, orderType, phase: 'Initialisation', returnCode: RETURN.NO_DOWNLOAD_DATA, transactionId: null }
 }

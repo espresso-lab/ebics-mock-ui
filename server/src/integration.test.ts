@@ -202,10 +202,13 @@ describe('EBICS handshake + flows (in-process)', () => {
     expect(store.listAvailableStatements()).toHaveLength(0)
   })
 
-  it('returns no-data when no statement is available', async () => {
+  it('returns no-data with a technically-OK header so the client treats it as an empty download', async () => {
     store.markStatementsFetched(store.listStatements().map((s) => s.id))
     const response = await post(downloadInit('BTD', btdCamtParams))
-    expect(textOf(parseXml(response), 'ReturnCode')).toBe('090005')
+    const doc = parseXml(response)
+    expect(verifyDocument(response, bankX002Pem)).toBe(true)
+    expect(textOf(byLocalName(doc, 'mutable')!, 'ReturnCode')).toBe('000000')
+    expect(textOf(byLocalName(doc, 'body')!, 'ReturnCode')).toBe('090005')
   })
 
   it('accepts a BTU upload, verifies the A006 signature and parses the pain.001', async () => {

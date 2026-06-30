@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { MantineProvider, createTheme } from '@mantine/core'
+import { MantineProvider } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
 import { Notifications } from '@mantine/notifications'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -13,15 +13,10 @@ import '@mantine/notifications/styles.css'
 import 'mantine-datatable/styles.css'
 import './index.css'
 import { router } from './routes'
+import { theme } from './theme'
 import { API_BASE, getHeaders } from './config'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: 1 } } })
-
-const theme = createTheme({
-  primaryColor: 'indigo',
-  fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-  defaultRadius: 'md',
-})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

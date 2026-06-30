@@ -45,7 +45,7 @@ function OrderDetails({ order }: { order: Order }) {
 }
 
 const fields: Field<Order>[] = [
-  listField('orderId', { accessor: 'orderId', title: 'Order-ID', sortable: true, render: (o) => <Code>{o.orderId}</Code> }),
+  listField('orderId', { accessor: 'orderId', title: 'Order-ID', sortable: true, render: (o) => <Code>{o.orderId}</Code> }, { delete: true }),
   listField('kind', { accessor: 'kind', title: 'Art' }),
   listField('msgName', { accessor: 'msgName', title: 'Nachricht' }),
   listField('itemCount', { accessor: 'itemCount', title: 'Posten', textAlign: 'right' }),

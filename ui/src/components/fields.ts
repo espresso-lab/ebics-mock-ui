@@ -9,14 +9,14 @@ export function listField<T extends Base>(id: string, column: Field<T>['column']
 export function formField<T extends Base>(
   id: string,
   column: Field<T>['column'],
-  opts: { type?: Field<T>['type']; required?: boolean; update?: boolean; placeholder?: string } = {},
+  opts: { type?: Field<T>['type']; required?: boolean; create?: boolean; update?: boolean; delete?: boolean; placeholder?: string } = {},
 ): Field<T> {
   return {
     id,
     list: true,
-    create: true,
-    update: opts.update ?? false,
-    delete: false,
+    create: opts.create ?? true,
+    update: opts.update ?? true,
+    delete: opts.delete ?? false,
     type: opts.type,
     required: opts.required,
     placeholder: opts.placeholder,

@@ -6,7 +6,7 @@ import { seedDemoData } from './seed.js'
 
 const store = new Store(config.dbPath)
 ensureBankKeys(store)
-seedDemoData(store)
+if (process.env.EBICS_SEED === 'true') seedDemoData(store)
 
 const app = await createApp(store)
 await app.listen({ port: config.port, host: config.host })

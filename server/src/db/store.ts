@@ -196,7 +196,7 @@ export class Store {
         input.statementId ?? null,
         now(),
       )
-    return this.db.prepare('SELECT * FROM booking WHERE id = ?').get(id) as Booking
+    return mapBooking(this.db.prepare('SELECT * FROM booking WHERE id = ?').get(id) as Row)
   }
 
   createOrder(input: {
@@ -405,6 +405,63 @@ export class Store {
 
   updateVeu(id: string, signaturesDone: number, status: VeuOrder['status']) {
     this.db.prepare('UPDATE veu_order SET signatures_done = ?, status = ? WHERE id = ?').run(signaturesDone, status, id)
+  }
+
+  updateAccount(id: string, input: Partial<Account>): Account | undefined {
+    const existing = this.getAccount(id)
+    if (!existing) return undefined
+    const merged = { ...existing, ...input }
+    this.db
+      .prepare('UPDATE account SET iban = ?, bic = ?, currency = ?, name = ?, balance = ? WHERE id = ?')
+      .run(merged.iban, merged.bic, merged.currency, merged.name, merged.balance, id)
+    return this.getAccount(id)
+  }
+
+  updateBooking(id: string, input: Partial<Booking>): Booking | undefined {
+    const existing = this.db.prepare('SELECT * FROM booking WHERE id = ?').get(id) as Row | undefined
+    if (!existing) return undefined
+    const merged = { ...mapBooking(existing), ...input }
+    this.db
+      .prepare(
+        `UPDATE booking SET book_date = ?, value_date = ?, amount = ?, currency = ?, credit_debit = ?,
+           remittance = ?, counterparty_name = ?, counterparty_iban = ? WHERE id = ?`,
+      )
+      .run(
+        merged.bookDate,
+        merged.valueDate,
+        merged.amount,
+        merged.currency,
+        merged.creditDebit,
+        merged.remittance,
+        merged.counterpartyName,
+        merged.counterpartyIban,
+        id,
+      )
+    return mapBooking(this.db.prepare('SELECT * FROM booking WHERE id = ?').get(id) as Row)
+  }
+
+  deleteParticipant(id: string) {
+    this.db.prepare('DELETE FROM participant WHERE id = ?').run(id)
+  }
+
+  deleteAccount(id: string) {
+    this.db.prepare('DELETE FROM account WHERE id = ?').run(id)
+  }
+
+  deleteBooking(id: string) {
+    this.db.prepare('DELETE FROM booking WHERE id = ?').run(id)
+  }
+
+  deleteOrder(id: string) {
+    this.db.prepare('DELETE FROM upload_order WHERE id = ?').run(id)
+  }
+
+  deleteStatement(id: string) {
+    this.db.prepare('DELETE FROM statement WHERE id = ?').run(id)
+  }
+
+  deleteVeu(id: string) {
+    this.db.prepare('DELETE FROM veu_order WHERE id = ?').run(id)
   }
 
   createTransactionState(state: TransactionState) {

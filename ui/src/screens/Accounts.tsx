@@ -46,7 +46,7 @@ const monthStart = () => {
 const today = () => new Date().toISOString().slice(0, 10)
 
 const bookingFields: Field<Booking>[] = [
-  formField('bookDate', { accessor: 'bookDate', title: 'Buchungstag', sortable: true }, { type: 'date', required: true }),
+  formField('bookDate', { accessor: 'bookDate', title: 'Buchungstag', sortable: true }, { type: 'date', required: true, delete: true }),
   formField('counterpartyName', { accessor: 'counterpartyName', title: 'Gegenpartei' }, {}),
   formField('counterpartyIban', { accessor: 'counterpartyIban', title: 'Gegen-IBAN' }, {}),
   formField('remittance', { accessor: 'remittance', title: 'Verwendungszweck' }, {}),
@@ -70,7 +70,7 @@ function Bookings({ account }: { account: Account }) {
 }
 
 const fields: Field<Account>[] = [
-  formField('iban', { accessor: 'iban', title: 'IBAN', sortable: true }, { required: true }),
+  formField('iban', { accessor: 'iban', title: 'IBAN', sortable: true }, { required: true, delete: true }),
   formField('bic', { accessor: 'bic', title: 'BIC' }, {}),
   formField('name', { accessor: 'name', title: 'Kontoinhaber' }, {}),
   formField('currency', { accessor: 'currency', title: 'Währung' }, { placeholder: 'EUR' }),

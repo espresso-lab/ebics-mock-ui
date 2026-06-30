@@ -1,16 +1,35 @@
-import { AppShell, Badge, Group, NavLink, ScrollArea, Text, Title } from '@mantine/core'
+import {
+  ActionIcon,
+  AppShell,
+  Badge,
+  Button,
+  CopyButton,
+  Group,
+  NavLink,
+  ScrollArea,
+  Text,
+  Title,
+  Tooltip,
+  useComputedColorScheme,
+  useMantineColorScheme,
+} from '@mantine/core'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import {
   IconArrowsExchange,
   IconBuildingBank,
+  IconCheck,
   IconChecklist,
+  IconCopy,
   IconFileText,
   IconFileUpload,
   IconKey,
+  IconMoon,
+  IconSun,
   IconUsers,
   IconWritingSign,
 } from '@tabler/icons-react'
 import { useApiQuery } from './api'
+import { bankUrl } from './config'
 
 const NAV = [
   { path: '/', label: 'Teilnehmer', icon: IconUsers },
@@ -26,6 +45,8 @@ const NAV = [
 export function Shell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const health = useApiQuery<{ status: string; hostId: string }>(['health'], '/api/health', 10_000)
+  const { setColorScheme } = useMantineColorScheme()
+  const scheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
   return (
     <AppShell header={{ height: 60 }} navbar={{ width: 250, breakpoint: 'sm' }} padding="md">
@@ -34,13 +55,37 @@ export function Shell() {
           <Group gap="xs">
             <IconBuildingBank size={22} />
             <Title order={4}>EBICS Mock Bank</Title>
-            <Badge variant="light" color="indigo">
+            <Badge variant="light" color="brand">
               H005
             </Badge>
           </Group>
-          <Badge color={health.data ? 'teal' : 'red'} variant="dot">
-            {health.data ? `online · ${health.data.hostId}` : 'offline'}
-          </Badge>
+          <Group gap="xs">
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label="Farbschema umschalten"
+              onClick={() => setColorScheme(scheme === 'dark' ? 'light' : 'dark')}
+            >
+              {scheme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </ActionIcon>
+            <CopyButton value={bankUrl} timeout={1500}>
+              {({ copied, copy }) => (
+                <Tooltip label={copied ? 'Kopiert!' : bankUrl} withArrow>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    onClick={copy}
+                    leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                  >
+                    Bank-URL
+                  </Button>
+                </Tooltip>
+              )}
+            </CopyButton>
+            <Badge color={health.data ? 'brand' : 'red'} variant="dot">
+              {health.data ? `online · ${health.data.hostId}` : 'offline'}
+            </Badge>
+          </Group>
         </Group>
       </AppShell.Header>
 

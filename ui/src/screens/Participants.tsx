@@ -22,7 +22,7 @@ function KeyList({ participantId }: { participantId: string }) {
 }
 
 const fields: Field<Participant>[] = [
-  listField('partnerId', { accessor: 'partnerId', title: 'Kunden-ID', sortable: true }),
+  listField('partnerId', { accessor: 'partnerId', title: 'Kunden-ID', sortable: true }, { delete: true }),
   listField('userId', { accessor: 'userId', title: 'Teilnehmer-ID', sortable: true }),
   listField('hostId', { accessor: 'hostId', title: 'Host-ID' }),
   listField('ini', { accessor: 'iniState', title: 'INI', render: (r) => <StateBadge value={r.iniState} /> }),

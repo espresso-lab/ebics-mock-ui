@@ -5,7 +5,7 @@ import { Money, StatusBadge, fmtDateTime } from '../components/ui'
 import type { VeuOrder } from '../types'
 
 const fields: Field<VeuOrder>[] = [
-  listField('orderId', { accessor: 'orderId', title: 'Order-ID', render: (v) => <Code>{v.orderId}</Code> }),
+  listField('orderId', { accessor: 'orderId', title: 'Order-ID', render: (v) => <Code>{v.orderId}</Code> }, { delete: true }),
   listField('kind', { accessor: 'kind', title: 'Art' }),
   listField('totalAmount', { accessor: 'totalAmount', title: 'Summe', textAlign: 'right', render: (v) => <Money amount={v.totalAmount} currency={v.currency} /> }),
   listField('signatures', { accessor: 'signaturesDone', title: 'Unterschriften', render: (v) => `${v.signaturesDone} / ${v.signaturesRequired}` }),

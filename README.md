@@ -78,7 +78,7 @@ verifiziert.
 Alle Listen sind `mantine-data-table` mit Aufklapp-Details:
 
 - **Teilnehmer** — INI/HIA/HPB-Ampel + empfangene Schlüssel-Hashes
-- **Konten & Umsätze** — Konten + Buchungen anlegen; *camt importieren* lädt echte camt.053-Umsätze hoch; Auswahl → *Auszug erzeugen* baut einen camt.053
+- **Konten & Umsätze** — Konten + Buchungen anlegen/bearbeiten/löschen; *camt importieren* lädt echte camt.053-Umsätze hoch; Auswahl → *Auszug erzeugen* baut einen camt.053. Teilnehmer/Aufträge/Auszüge/VEU sind löschbar (zum Aufräumen)
 - **Eingereichte Aufträge** — per BTU eingereichte pain.001/008, entschlüsselt + geparst, mit Einzelposten und Roh-pain; die bankfachliche A006-Signatur (ES) wird verifiziert (gültig/ungültig/n.v.)
 - **Kontoauszüge** — erzeugte camt.053 (AVAILABLE/FETCHED), Inline-Anzeige
 - **VEU / Freigaben** — offene verteilte Unterschriften
@@ -93,6 +93,7 @@ Alle Listen sind `mantine-data-table` mit Aufklapp-Details:
 | `PORT` | `8088` | Server-Port |
 | `EBICS_HOST_ID` | `MOCKBANK` | Host-ID in HEV/HPB/HTD |
 | `EBICS_MOCK_DB` | `./ebics-mock.sqlite` | Pfad der File-DB |
+| `EBICS_SEED` | – | `true` seedet ein Demo-Konto + Buchungen beim ersten Start (Default: leer) |
 | `EBICS_UI_DIR` | – | Wenn gesetzt, serviert der Server das gebaute UI von dort (Single-Container) |
 | `VITE_API_BASE` | `` (relativ) | API-Basis fürs UI; dev nutzt den Vite-Proxy auf `:8088` |
 

@@ -7,7 +7,7 @@ import { StatusBadge, fmtDateTime } from '../components/ui'
 import type { Statement } from '../types'
 
 const fields: Field<Statement>[] = [
-  listField('iban', { accessor: 'iban', title: 'IBAN', sortable: true, render: (s) => <Code>{s.iban}</Code> }),
+  listField('iban', { accessor: 'iban', title: 'IBAN', sortable: true, render: (s) => <Code>{s.iban}</Code> }, { delete: true }),
   listField('period', { accessor: 'fromDate', title: 'Zeitraum', render: (s) => `${s.fromDate} – ${s.toDate}` }),
   listField('fileName', { accessor: 'fileName', title: 'Datei' }),
   listField('status', { accessor: 'status', title: 'Status', render: (s) => <StatusBadge value={s.status} /> }),

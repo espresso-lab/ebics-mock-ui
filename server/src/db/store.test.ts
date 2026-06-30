@@ -89,6 +89,54 @@ describe('Store', () => {
     expect(store.getStatement(stmt.id)!.status).toBe('FETCHED')
   })
 
+  it('deletes a participant and cascades its keys and orders', () => {
+    const store = newStore()
+    const p = store.findOrCreateParticipant('MOCKBANK', 'MV1', 'USER1')
+    store.setParticipantKey(p.id, 'A006', 'pem', 'd')
+    const orderId = store.createOrder({
+      participantId: p.id,
+      orderId: 'N001',
+      kind: 'CCT',
+      service: 'SCT',
+      msgName: 'pain.001',
+      signatureValid: true,
+      itemCount: 1,
+      totalAmount: '10.00',
+      currency: 'EUR',
+      rawPain: '<Document/>',
+    })
+    store.addOrderItem(orderId, { name: 'A', iban: 'DE', amount: '10.00', currency: 'EUR', remittance: '', endToEndId: '' })
+
+    store.deleteParticipant(p.id)
+
+    expect(store.listParticipants()).toHaveLength(0)
+    expect(store.listParticipantKeys(p.id)).toHaveLength(0)
+    expect(store.listOrders()).toHaveLength(0)
+  })
+
+  it('deletes an account and cascades its bookings and statements', () => {
+    const store = newStore()
+    const account = store.createAccount({ partnerId: 'MV1', iban: 'DE1', bic: '', currency: 'EUR', name: 'WEG', balance: '0.00' })
+    store.createBooking({ accountId: account.id, bookDate: '2026-06-01', valueDate: '2026-06-01', amount: '5.00', currency: 'EUR', creditDebit: 'CRDT', remittance: '', counterpartyName: '', counterpartyIban: '' })
+    store.createStatement({ accountId: account.id, iban: account.iban, fromDate: '2026-06-01', toDate: '2026-06-30', fileName: 'c.xml', content: '<x/>' })
+
+    store.deleteAccount(account.id)
+
+    expect(store.listAccounts()).toHaveLength(0)
+    expect(store.listBookings(account.id)).toHaveLength(0)
+    expect(store.listStatements()).toHaveLength(0)
+  })
+
+  it('updates an account and a booking in place', () => {
+    const store = newStore()
+    const account = store.createAccount({ partnerId: 'MV1', iban: 'DE1', bic: '', currency: 'EUR', name: 'Old', balance: '0.00' })
+    expect(store.updateAccount(account.id, { name: 'New', balance: '99.00' })!.name).toBe('New')
+    const booking = store.createBooking({ accountId: account.id, bookDate: '2026-06-01', valueDate: '2026-06-01', amount: '5.00', currency: 'EUR', creditDebit: 'CRDT', remittance: 'a', counterpartyName: '', counterpartyIban: '' })
+    const updated = store.updateBooking(booking.id, { amount: '7.50', remittance: 'b' })!
+    expect(updated.amount).toBe('7.50')
+    expect(updated.remittance).toBe('b')
+  })
+
   it('records exchanges and protocol entries', () => {
     const store = newStore()
     store.addExchange({

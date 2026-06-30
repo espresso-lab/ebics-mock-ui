@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import type { Booking } from '@ebics-mock/shared'
+import type { Account, Booking } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { generateCamt053 } from '../ebics/camt.js'
 import { parseCamtBookings } from '../ebics/camtImport.js'
@@ -29,6 +29,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
       balance: body.balance ?? '0.00',
     })
   })
+  app.put('/api/accounts/:id', (req, reply) => {
+    const updated = store.updateAccount((req.params as { id: string }).id, req.body as Partial<Account>)
+    return updated ?? reply.code(404).send({ error: 'account not found' })
+  })
   app.get('/api/accounts/:id/bookings', (req) => store.listBookings((req.params as { id: string }).id))
   app.post('/api/accounts/:id/bookings', (req, reply) => {
     const id = (req.params as { id: string }).id
@@ -46,6 +50,11 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
       counterpartyName: b.counterpartyName ?? '',
       counterpartyIban: b.counterpartyIban ?? '',
     })
+  })
+
+  app.put('/api/accounts/:accountId/bookings/:id', (req, reply) => {
+    const updated = store.updateBooking((req.params as { id: string }).id, req.body as Partial<Booking>)
+    return updated ?? reply.code(404).send({ error: 'booking not found' })
   })
 
   app.post('/api/accounts/:id/import-camt', (req, reply) => {
@@ -140,4 +149,17 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
       signaturesRequired: body.signaturesRequired ?? 2,
     })
   })
+
+  const del = (path: string, remove: (id: string) => void) =>
+    app.delete(path, (req, reply) => {
+      remove((req.params as { id: string }).id)
+      return reply.code(204).send()
+    })
+
+  del('/api/participants/:id', (id) => store.deleteParticipant(id))
+  del('/api/accounts/:id', (id) => store.deleteAccount(id))
+  del('/api/accounts/:accountId/bookings/:id', (id) => store.deleteBooking(id))
+  del('/api/orders/:id', (id) => store.deleteOrder(id))
+  del('/api/statements/:id', (id) => store.deleteStatement(id))
+  del('/api/veu/:id', (id) => store.deleteVeu(id))
 }

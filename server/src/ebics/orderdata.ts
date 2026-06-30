@@ -77,10 +77,10 @@ function permissionXml(entry: OrderCatalogEntry): string {
 
 function accountInfoXml(account: Account, index: number): string {
   return (
-    `<AccountInfo ID="A${index + 1}" Currency="${account.currency}" Description="${escapeXml(account.name)}">` +
+    `<AccountInfo ID="A${index + 1}" Currency="${account.currency}" Description="${escapeXml(account.name || account.iban)}">` +
     `<AccountNumber international="true">${account.iban}</AccountNumber>` +
-    (account.bic ? `<BankCode international="true">${account.bic}</BankCode>` : '') +
-    `<AccountHolder>${escapeXml(account.name)}</AccountHolder></AccountInfo>`
+    `<BankCode international="true">${account.bic || 'MOCKDEFFXXX'}</BankCode>` +
+    `<AccountHolder>${escapeXml(account.name || account.iban)}</AccountHolder></AccountInfo>`
   )
 }
 

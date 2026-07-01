@@ -86,9 +86,32 @@
 
 .footer {
   border-top: 1px solid var(--mantine-color-default-border);
-  padding: var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
 }
 
 .footer[data-collapsed] {
-  padding: var(--mantine-spacing-sm) 6px;
+  padding: var(--mantine-spacing-xs) 6px;
+}
+
+.settingsButton {
+  display: block;
+  width: 100%;
+  padding: var(--mantine-spacing-xs);
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-text);
+  transition: background-color 150ms ease;
+}
+
+.settingsButton:hover {
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.settingsButton:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+.settingsChevron {
+  flex: 0 0 auto;
+  color: var(--mantine-color-dimmed);
 }

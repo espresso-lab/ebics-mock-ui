@@ -3,16 +3,18 @@ import {
   ActionIcon,
   AppShell,
   Badge,
+  Box,
   Burger,
-  Button,
   Container,
   CopyButton,
   Divider,
   Group,
+  Menu,
   NavLink,
   ScrollArea,
   Stack,
   Text,
+  ThemeIcon,
   Title,
   Tooltip,
   UnstyledButton,
@@ -35,6 +37,7 @@ import {
   type Icon,
   IconKey,
   IconMoon,
+  IconSettings,
   IconSun,
   IconUsers,
   IconWritingSign,
@@ -135,7 +138,7 @@ export function Shell() {
           <Group h="100%" px="md" justify="space-between">
             <Group gap="xs">
               <IconBuildingBank size={22} />
-              <Title order={5}>EBICS Mock Bank</Title>
+              <Title order={5}>Mock Bank</Title>
             </Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
           </Group>
@@ -149,7 +152,7 @@ export function Shell() {
               <IconBuildingBank size={24} />
               {!rail && (
                 <>
-                  <Title order={5}>EBICS Mock Bank</Title>
+                  <Title order={5}>Mock Bank</Title>
                   <Badge variant="light" color="brand" size="sm">
                     H005
                   </Badge>
@@ -179,46 +182,51 @@ export function Shell() {
         </AppShell.Section>
 
         <AppShell.Section className={classes.footer} data-collapsed={rail || undefined}>
-          <Stack gap="xs" align={rail ? 'center' : 'stretch'}>
-            {rail ? (
-              <Tooltip label={health.data ? `online · ${health.data.hostId}` : 'offline'} position="right" withArrow>
-                <Badge color={health.data ? 'brand' : 'red'} variant="dot" size="xs" />
-              </Tooltip>
-            ) : (
-              <Badge color={health.data ? 'brand' : 'red'} variant="dot" size="sm">
-                {health.data ? `online · ${health.data.hostId}` : 'offline'}
-              </Badge>
-            )}
-            <Group gap="xs" justify={rail ? 'center' : 'flex-start'} wrap="nowrap">
-              <Tooltip label="Farbschema umschalten" position={rail ? 'right' : 'top'} withArrow>
-                <ActionIcon
-                  variant="default"
-                  size="lg"
-                  aria-label="Farbschema umschalten"
-                  onClick={() => setColorScheme(scheme === 'dark' ? 'light' : 'dark')}
-                >
-                  {scheme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
-                </ActionIcon>
-              </Tooltip>
+          <Menu width={rail ? 220 : 'target'} position={rail ? 'right-end' : 'top-start'} offset={rail ? 14 : 6} shadow="md" radius="md">
+            <Menu.Target>
+              <UnstyledButton className={classes.settingsButton} aria-label="Einstellungen">
+                <Group gap={10} wrap="nowrap" justify={rail ? 'center' : 'flex-start'}>
+                  <ThemeIcon variant="light" color="gray" radius="xl" size={34}>
+                    <IconSettings size={18} />
+                  </ThemeIcon>
+                  {!rail && (
+                    <>
+                      <Box flex={1} miw={0}>
+                        <Text fz={13} fw={600} lh={1.2}>
+                          Einstellungen
+                        </Text>
+                        <Text c={health.data ? 'dimmed' : 'red'} fz={11} truncate>
+                          {health.data ? `online · ${health.data.hostId}` : 'offline'}
+                        </Text>
+                      </Box>
+                      <IconChevronRight size={14} stroke={1.5} className={classes.settingsChevron} />
+                    </>
+                  )}
+                </Group>
+              </UnstyledButton>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>{health.data ? `online · ${health.data.hostId}` : 'offline'}</Menu.Label>
+              <Menu.Item
+                closeMenuOnClick={false}
+                leftSection={scheme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+                onClick={() => setColorScheme(scheme === 'dark' ? 'light' : 'dark')}
+              >
+                {scheme === 'dark' ? 'Heller Modus' : 'Dunkler Modus'}
+              </Menu.Item>
               <CopyButton value={bankUrl} timeout={1500}>
-                {({ copied, copy }) =>
-                  rail ? (
-                    <Tooltip label={copied ? 'Kopiert!' : 'Bank-URL kopieren'} position="right" withArrow>
-                      <ActionIcon variant="default" size="lg" onClick={copy} aria-label="Bank-URL kopieren">
-                        {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                      </ActionIcon>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip label={copied ? 'Kopiert!' : bankUrl} withArrow>
-                      <Button variant="default" flex={1} onClick={copy} leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}>
-                        Bank-URL
-                      </Button>
-                    </Tooltip>
-                  )
-                }
+                {({ copied, copy }) => (
+                  <Menu.Item
+                    closeMenuOnClick={false}
+                    leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                    onClick={copy}
+                  >
+                    {copied ? 'Bank-URL kopiert!' : 'Bank-URL kopieren'}
+                  </Menu.Item>
+                )}
               </CopyButton>
-            </Group>
-          </Stack>
+            </Menu.Dropdown>
+          </Menu>
         </AppShell.Section>
       </AppShell.Navbar>
 

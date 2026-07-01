@@ -1,40 +1,29 @@
-import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Code, ScrollArea, Spoiler, Stack, Table } from '@mantine/core'
+import { DataTable, type Field, SubTable, type SubTableColumn } from '@espresso-lab/mantine-data-table'
+import { Code, ScrollArea, Spoiler, Stack } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconWritingSign } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { apiPost, useApiQuery } from '../api'
 import { listField } from '../components/fields'
 import { Money, SignatureBadge, StatusBadge, fmtDateTime } from '../components/ui'
-import type { Order } from '../types'
+import type { Order, OrderItem } from '../types'
+
+const itemColumns: SubTableColumn<OrderItem>[] = [
+  { accessor: 'name', title: 'Empfänger/Zahler' },
+  { accessor: 'iban', title: 'IBAN', render: (item) => <Code>{item.iban}</Code> },
+  { accessor: 'remittance', title: 'Verwendungszweck' },
+  { accessor: 'endToEndId', title: 'End-to-End' },
+  { accessor: 'amount', title: 'Betrag', textAlign: 'right', render: (item) => <Money amount={item.amount} currency={item.currency} /> },
+]
 
 function OrderDetails({ order }: { order: Order }) {
+  const isMobile = useMediaQuery('(max-width: 48em)') ?? false
   const { data } = useApiQuery<Order>(['order', order.id], `/api/orders/${order.id}`)
   const items = data?.items ?? []
   return (
     <Stack p="sm" gap="sm">
-      <Table withTableBorder withColumnBorders striped>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Empfänger/Zahler</Table.Th>
-            <Table.Th>IBAN</Table.Th>
-            <Table.Th>Verwendungszweck</Table.Th>
-            <Table.Th>End-to-End</Table.Th>
-            <Table.Th ta="right">Betrag</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {items.map((item, index) => (
-            <Table.Tr key={index}>
-              <Table.Td>{item.name}</Table.Td>
-              <Table.Td><Code>{item.iban}</Code></Table.Td>
-              <Table.Td>{item.remittance}</Table.Td>
-              <Table.Td>{item.endToEndId}</Table.Td>
-              <Table.Td><Money amount={item.amount} currency={item.currency} /></Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <SubTable<OrderItem> mobile={isMobile} columns={itemColumns} records={items} withTableBorder withColumnBorders striped />
       <Spoiler maxHeight={0} showLabel="Roh-pain anzeigen" hideLabel="Roh-pain ausblenden">
         <ScrollArea h={260}>
           <Code block>{data?.rawPain ?? ''}</Code>

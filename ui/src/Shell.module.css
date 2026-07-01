@@ -24,13 +24,18 @@
   transition: color 150ms ease;
 }
 
+.root:hover {
+  background-color: var(--mantine-color-default-hover);
+}
+
 .root:where([data-active], [aria-current="page"]) {
-  background-color: light-dark(
-    var(--mantine-color-brand-0),
-    color-mix(in srgb, var(--mantine-primary-color-filled) 22%, transparent)
-  );
-  color: light-dark(var(--mantine-primary-color-filled), var(--mantine-color-text));
+  background-color: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
   font-weight: 600;
+}
+
+.root:where([data-active], [aria-current="page"]):hover {
+  background-color: var(--mantine-primary-color-light-hover);
 }
 
 .root:where([data-active], [aria-current="page"])::before {
@@ -38,7 +43,7 @@
 }
 
 .root:where([data-active], [aria-current="page"]) [data-position="left"] {
-  color: var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-light-color);
 }
 
 .label {
@@ -77,11 +82,8 @@
 }
 
 .railLink:where([data-active], [aria-current="page"]) {
-  background-color: light-dark(
-    var(--mantine-color-brand-0),
-    color-mix(in srgb, var(--mantine-primary-color-filled) 22%, transparent)
-  );
-  color: light-dark(var(--mantine-primary-color-filled), var(--mantine-color-text));
+  background-color: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
 }
 
 .footer {
@@ -103,7 +105,7 @@
 }
 
 .settingsButton:hover {
-  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  background-color: var(--mantine-color-default-hover);
 }
 
 .settingsButton:focus-visible {

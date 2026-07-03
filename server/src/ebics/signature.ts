@@ -7,9 +7,31 @@ const XPOINTER = "#xpointer(//*[@authenticate='true'])"
 
 export const AUTH_SIGNATURE_SKELETON = `<AuthSignature><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="${ALGO.C14N}"></ds:CanonicalizationMethod><ds:SignatureMethod Algorithm="${ALGO.RSA_SHA256}"></ds:SignatureMethod><ds:Reference URI="${XPOINTER}"><ds:Transforms><ds:Transform Algorithm="${ALGO.C14N}"></ds:Transform></ds:Transforms><ds:DigestMethod Algorithm="${ALGO.SHA256}"></ds:DigestMethod><ds:DigestValue></ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue></ds:SignatureValue></AuthSignature>`
 
+function inScopeNamespaces(node: Node): { prefix: string; namespaceURI: string }[] {
+  const collected = new Map<string, string>()
+  let current: Node | null = node
+  while (current && (current as Element).attributes) {
+    const attributes = (current as Element).attributes
+    for (let i = 0; i < attributes.length; i++) {
+      const attribute = attributes.item(i)
+      if (!attribute) continue
+      const prefix =
+        attribute.name === 'xmlns' ? '' : attribute.name.startsWith('xmlns:') ? attribute.name.slice(6) : null
+      if (prefix !== null && !collected.has(prefix)) {
+        collected.set(prefix, attribute.value)
+      }
+    }
+    current = current.parentNode
+  }
+  const apexHasPrefix = Boolean((node as Element).prefix)
+  return [...collected]
+    .filter(([prefix]) => prefix !== '' || apexHasPrefix)
+    .map(([prefix, namespaceURI]) => ({ prefix, namespaceURI }))
+}
+
 function canonicalize(node: Node): string {
   const canonicalizer = new C14nCanonicalization()
-  return canonicalizer.process(node as never, {}) as string
+  return canonicalizer.process(node as never, { ancestorNamespaces: inScopeNamespaces(node) }) as string
 }
 
 function setText(node: Node, value: string): void {

@@ -60,6 +60,10 @@ export class Store {
       this.db.exec('ALTER TABLE participant ADD COLUMN activated INTEGER NOT NULL DEFAULT 0')
       this.db.exec("UPDATE participant SET activated = 1 WHERE hpb_state = 'DELIVERED'")
     }
+    const bookingColumns = this.db.prepare('PRAGMA table_info(booking)').all() as { name: string }[]
+    if (!bookingColumns.some((c) => c.name === 'end_to_end_id')) {
+      this.db.exec("ALTER TABLE booking ADD COLUMN end_to_end_id TEXT NOT NULL DEFAULT ''")
+    }
   }
 
   close() {
@@ -219,13 +223,13 @@ export class Store {
     return r ? mapBooking(r) : undefined
   }
 
-  createBooking(input: Omit<Booking, 'id'> & { statementId?: string | null }): Booking {
+  createBooking(input: Omit<Booking, 'id' | 'endToEndId'> & { endToEndId?: string; statementId?: string | null }): Booking {
     const id = randomUUID()
     this.db
       .prepare(
         `INSERT INTO booking (id, account_id, book_date, value_date, amount, currency, credit_debit,
-           remittance, counterparty_name, counterparty_iban, statement_id, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           remittance, counterparty_name, counterparty_iban, end_to_end_id, statement_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -238,6 +242,7 @@ export class Store {
         input.remittance,
         input.counterpartyName,
         input.counterpartyIban,
+        input.endToEndId ?? '',
         input.statementId ?? null,
         now(),
       )
@@ -603,6 +608,7 @@ function mapBooking(r: Row): Booking {
     remittance: str(r.remittance),
     counterpartyName: str(r.counterparty_name),
     counterpartyIban: str(r.counterparty_iban),
+    endToEndId: str(r.end_to_end_id),
   }
 }
 

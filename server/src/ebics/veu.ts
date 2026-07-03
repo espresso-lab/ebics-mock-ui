@@ -1,6 +1,7 @@
 import type { Participant, VeuOrder } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { requireBankKey } from './bank.js'
+import { bookOrder } from './booking.js'
 import { sha256 } from './crypto.js'
 import type { HandlerResult, RespondDownload } from './handlers.js'
 import { protocol } from './handlers.js'
@@ -88,10 +89,19 @@ function signOrder(store: Store, participant: Participant, parsed: ParsedRequest
     const done = veu.signaturesDone + 1
     const status: VeuOrder['status'] = done >= veu.signaturesRequired ? 'SIGNED' : 'OPEN'
     store.updateVeu(veu.id, done, status)
-    if (status === 'SIGNED') store.setOrderStatus(orderDbId(store, veu.orderId), 'BOOKED')
+    if (status === 'SIGNED') executeAuthorizedOrder(store, veu.orderId)
     protocol(store, participant.id, 'HVE', RETURN.OK, veu.orderId)
   }
   return ok(store, participant, 'HVE')
+}
+
+function executeAuthorizedOrder(store: Store, orderId: string) {
+  const id = orderDbId(store, orderId)
+  try {
+    bookOrder(store, id)
+  } catch {
+    store.setOrderStatus(id, 'BOOKED')
+  }
 }
 
 function cancelOrder(store: Store, participant: Participant, parsed: ParsedRequest): HandlerResult {

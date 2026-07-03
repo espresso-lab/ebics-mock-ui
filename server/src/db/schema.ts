@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS booking (
   remittance TEXT NOT NULL DEFAULT '',
   counterparty_name TEXT NOT NULL DEFAULT '',
   counterparty_iban TEXT NOT NULL DEFAULT '',
+  end_to_end_id TEXT NOT NULL DEFAULT '',
   statement_id TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY (account_id) REFERENCES account(id) ON DELETE CASCADE

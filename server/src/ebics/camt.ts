@@ -34,11 +34,12 @@ function entry(booking: Booking, ownIban: string): string {
     booking.creditDebit === 'CRDT'
       ? `<Dbtr>${counterparty}</Dbtr>${counterpartyAcct ? `<DbtrAcct>${counterpartyAcct}</DbtrAcct>` : ''}<CdtrAcct>${ownAcct}</CdtrAcct>`
       : `<DbtrAcct>${ownAcct}</DbtrAcct><Cdtr>${counterparty}</Cdtr>${counterpartyAcct ? `<CdtrAcct>${counterpartyAcct}</CdtrAcct>` : ''}`
+  const refs = booking.endToEndId ? `<Refs><EndToEndId>${escapeXml(booking.endToEndId)}</EndToEndId></Refs>` : ''
   return (
     `<Ntry><Amt Ccy="${booking.currency}">${amount}</Amt><CdtDbtInd>${booking.creditDebit}</CdtDbtInd>` +
     `<Sts><Cd>BOOK</Cd></Sts><BookgDt><Dt>${booking.bookDate}</Dt></BookgDt><ValDt><Dt>${booking.valueDate}</Dt></ValDt>` +
     `<BkTxCd><Prtry><Cd>NTRF</Cd></Prtry></BkTxCd>` +
-    `<NtryDtls><TxDtls><RltdPties>${parties}</RltdPties>` +
+    `<NtryDtls><TxDtls>${refs}<RltdPties>${parties}</RltdPties>` +
     `<RmtInf><Ustrd>${escapeXml(booking.remittance)}</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>`
   )
 }

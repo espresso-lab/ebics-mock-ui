@@ -2,7 +2,7 @@ import { DataTable, type Field, SubTable, type SubTableColumn } from '@espresso-
 import { Code, ScrollArea, Spoiler, Stack } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconWritingSign } from '@tabler/icons-react'
+import { IconCoins, IconWritingSign } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { apiPost, useApiQuery } from '../api'
 import { listField } from '../components/fields'
@@ -58,6 +58,25 @@ export function Orders() {
     notifications.show({ color: 'yellow', message: `${orders.length} Auftrag/Aufträge zur VEU-Freigabe gestellt.` })
   }
 
+  const book = async (orders: Order[]) => {
+    try {
+      for (const order of orders) {
+        await apiPost(`/api/orders/${order.id}/book`)
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['bookings'] }),
+      ])
+      notifications.show({
+        color: 'green',
+        message: `${orders.length} Auftrag/Aufträge verbucht. Unter Konten einen Tagesauszug erzeugen, damit die Umsätze im camt.053 landen.`,
+      })
+    } catch (e) {
+      notifications.show({ color: 'red', message: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
   return (
     <DataTable<Order>
       title="Eingereichte Aufträge"
@@ -69,6 +88,12 @@ export function Orders() {
       mobileCards
       defaultSort={{ field: 'createdAt', direction: 'desc' }}
       actions={[
+        {
+          label: 'Verbuchen',
+          icon: <IconCoins size={16} />,
+          onClick: book,
+          disabled: (records) => records.length === 0 || records.some((r) => r.status !== 'RECEIVED'),
+        },
         {
           label: 'VEU anfordern',
           icon: <IconWritingSign size={16} />,

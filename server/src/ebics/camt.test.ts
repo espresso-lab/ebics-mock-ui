@@ -12,8 +12,8 @@ const account: Account = {
 }
 
 const bookings: Booking[] = [
-  { id: 'b1', accountId: 'a1', bookDate: '2026-06-10', valueDate: '2026-06-10', amount: '850.00', currency: 'EUR', creditDebit: 'CRDT', remittance: 'Hausgeld Juni', counterpartyName: 'Anna Müller', counterpartyIban: 'DE89370400440532013000' },
-  { id: 'b2', accountId: 'a1', bookDate: '2026-06-12', valueDate: '2026-06-12', amount: '420.00', currency: 'EUR', creditDebit: 'DBIT', remittance: 'Stadtwerke', counterpartyName: 'Stadtwerke München', counterpartyIban: 'DE12500105170648489890' },
+  { id: 'b1', accountId: 'a1', bookDate: '2026-06-10', valueDate: '2026-06-10', amount: '850.00', currency: 'EUR', creditDebit: 'CRDT', remittance: 'Hausgeld Juni', counterpartyName: 'Anna Müller', counterpartyIban: 'DE89370400440532013000', endToEndId: 'E2EHAUSGELD1' },
+  { id: 'b2', accountId: 'a1', bookDate: '2026-06-12', valueDate: '2026-06-12', amount: '420.00', currency: 'EUR', creditDebit: 'DBIT', remittance: 'Stadtwerke', counterpartyName: 'Stadtwerke München', counterpartyIban: 'DE12500105170648489890', endToEndId: '' },
 ]
 
 const xml = generateCamt053({

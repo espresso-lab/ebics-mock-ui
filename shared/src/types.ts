@@ -52,6 +52,7 @@ export interface Booking {
   remittance: string
   counterpartyName: string
   counterpartyIban: string
+  endToEndId: string
 }
 
 export type OrderKind = 'CCT' | 'CCC' | 'CDD' | 'CDC'

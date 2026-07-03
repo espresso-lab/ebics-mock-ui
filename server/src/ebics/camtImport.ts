@@ -10,6 +10,7 @@ export interface ImportedBooking {
   remittance: string
   counterpartyName: string
   counterpartyIban: string
+  endToEndId: string
 }
 
 function attrCcy(node: Node | undefined): string {
@@ -22,6 +23,11 @@ function dateOf(node: Node | undefined): string {
   if (!node) return ''
   const date = textOf(node, 'Dt') || textOf(node, 'DtTm')
   return date.slice(0, 10)
+}
+
+function normalizedEndToEndId(scope: Node): string {
+  const value = textOf(byLocalName(scope, 'Refs') ?? scope, 'EndToEndId')
+  return value === 'NOTPROVIDED' ? '' : value
 }
 
 export function parseCamtBookings(xml: string): ImportedBooking[] {
@@ -49,6 +55,7 @@ export function parseCamtBookings(xml: string): ImportedBooking[] {
       remittance: textOf(byLocalName(scope, 'RmtInf') ?? scope, 'Ustrd'),
       counterpartyName: party ? textOf(party, 'Nm') : '',
       counterpartyIban: partyAccount ? textOf(partyAccount, 'IBAN') : '',
+      endToEndId: normalizedEndToEndId(scope),
     }
   })
 }

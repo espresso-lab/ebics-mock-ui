@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import type { Account, Booking, CreditDebit } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
+import { bookOrder } from '../ebics/booking.js'
 import { generateCamt053 } from '../ebics/camt.js'
 import { parseCamtBookings } from '../ebics/camtImport.js'
 import { ebicsPublicKeyDigest, generateRsaKeyPair } from '../ebics/crypto.js'
@@ -104,6 +105,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
       remittance: b.remittance ?? '',
       counterpartyName: b.counterpartyName ?? '',
       counterpartyIban: b.counterpartyIban ?? '',
+      endToEndId: b.endToEndId ?? '',
     })
   })
 
@@ -144,6 +146,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
         remittance: b.remittance,
         counterpartyName: b.counterpartyName,
         counterpartyIban: b.counterpartyIban,
+        endToEndId: b.endToEndId,
       })
     }
     return { imported: bookings.length }
@@ -153,6 +156,18 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
   app.get('/api/orders/:id', (req, reply) => {
     const order = store.getOrder((req.params as { id: string }).id)
     return order ?? reply.code(404).send({ error: 'order not found' })
+  })
+  app.post('/api/orders/:id/book', (req, reply) => {
+    const order = store.getOrder((req.params as { id: string }).id)
+    if (!order) return reply.code(404).send({ error: 'order not found' })
+    if (order.status !== 'RECEIVED') {
+      return reply.code(400).send({ error: `order is ${order.status}, only RECEIVED orders can be booked` })
+    }
+    try {
+      return bookOrder(store, order.id)
+    } catch (e) {
+      return reply.code(400).send({ error: e instanceof Error ? e.message : String(e) })
+    }
   })
 
   app.get('/api/statements', () => store.listStatements())

@@ -252,7 +252,7 @@ export function Shell() {
         </Tooltip>
       )}
 
-      <AppShell.Main bg="var(--mantine-color-gray-0)">
+      <AppShell.Main bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
         <Container fluid p="md" mih="100%" bg="var(--mantine-color-body)" style={{ borderRadius: 'var(--mantine-radius-md)', boxShadow: 'var(--mantine-shadow-sm)' }}>
           <Outlet />
         </Container>

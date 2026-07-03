@@ -9,6 +9,7 @@ import { apiPost } from '../api'
 import { formField } from '../components/fields'
 import { Money } from '../components/ui'
 import type { Account, Booking } from '../types'
+import { GERMAN_DATE_FORMAT, GERMAN_DATE_PLACEHOLDER, parseGermanDate } from '../utils/date'
 
 function CamtImport({ accountId }: { accountId: string }) {
   const queryClient = useQueryClient()
@@ -152,10 +153,27 @@ export function Accounts() {
       <Modal opened={statementAccounts !== null} onClose={closeModal} title="Kontoauszug erzeugen" centered>
         <Stack>
           <Text size="sm" c="dimmed">
-            Zeitraum für den camt.053. Leer lassen = alle Buchungen des Kontos.
+            Zeitraum für den camt.053. Leer lassen = alle Buchungen bis heute (empfohlen). Ein »Bis«
+            vor dem heutigen Tag lässt gerade verbuchte Aufträge außen vor.
           </Text>
-          <DateInput label="Von" placeholder="erste Buchung" valueFormat="DD.MM.YYYY" clearable value={fromDate} onChange={setFromDate} />
-          <DateInput label="Bis" placeholder="letzte Buchung" valueFormat="DD.MM.YYYY" clearable value={toDate} onChange={setToDate} />
+          <DateInput
+            label="Von"
+            placeholder={GERMAN_DATE_PLACEHOLDER}
+            valueFormat={GERMAN_DATE_FORMAT}
+            dateParser={parseGermanDate}
+            clearable
+            value={fromDate}
+            onChange={setFromDate}
+          />
+          <DateInput
+            label="Bis"
+            placeholder={GERMAN_DATE_PLACEHOLDER}
+            valueFormat={GERMAN_DATE_FORMAT}
+            dateParser={parseGermanDate}
+            clearable
+            value={toDate}
+            onChange={setToDate}
+          />
           <Group justify="flex-end" mt="sm">
             <Button variant="default" onClick={closeModal}>
               Abbrechen

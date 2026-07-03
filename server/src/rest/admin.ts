@@ -178,8 +178,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     const body = req.body as { fromDate?: string; toDate?: string }
     const all = store.listBookings(id)
     const dates = all.map((b) => b.bookDate).filter(Boolean).sort()
-    const fromDate = body.fromDate ?? dates[0] ?? '2026-01-01'
-    const toDate = body.toDate ?? dates[dates.length - 1] ?? new Date().toISOString().slice(0, 10)
+    const today = new Date().toISOString().slice(0, 10)
+    const latestBooking = dates[dates.length - 1] ?? today
+    const fromDate = body.fromDate ?? dates[0] ?? today
+    const toDate = body.toDate ?? (latestBooking > today ? latestBooking : today)
     const inRange = all.filter((b) => b.bookDate >= fromDate && b.bookDate <= toDate)
     const opening = all.filter((b) => b.bookDate < fromDate).reduce((s, b) => s + signed(b), 0)
     const closing = opening + inRange.reduce((s, b) => s + signed(b), 0)

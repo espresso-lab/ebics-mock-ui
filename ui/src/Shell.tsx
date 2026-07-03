@@ -130,8 +130,7 @@ export function Shell() {
       layout={isMobile ? 'default' : 'alt'}
       header={{ height: isMobile ? 60 : 0 }}
       navbar={{ width: navbarWidth, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      styles={{ navbar: { transition: 'width 200ms ease' }, main: { transition: 'padding 200ms ease' } }}
-      padding="md"
+      styles={{ navbar: { transition: 'width 200ms ease' } }}
     >
       <AppShell.Header withBorder={false}>
         {isMobile && (
@@ -252,8 +251,8 @@ export function Shell() {
         </Tooltip>
       )}
 
-      <AppShell.Main bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))">
-        <Container fluid p="md" mih="100%" bg="var(--mantine-color-body)" style={{ borderRadius: 'var(--mantine-radius-md)', boxShadow: 'var(--mantine-shadow-sm)' }}>
+      <AppShell.Main bg="var(--mantine-color-gray-0)">
+        <Container fluid p="md" mih="100vh" bg="var(--mantine-color-body)" style={{ boxShadow: 'var(--mantine-shadow-sm)' }}>
           <Outlet />
         </Container>
       </AppShell.Main>

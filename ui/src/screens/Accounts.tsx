@@ -162,6 +162,7 @@ export function Accounts() {
             valueFormat={GERMAN_DATE_FORMAT}
             dateParser={parseGermanDate}
             clearable
+            allowDeselect={false}
             value={fromDate}
             onChange={setFromDate}
           />
@@ -171,6 +172,7 @@ export function Accounts() {
             valueFormat={GERMAN_DATE_FORMAT}
             dateParser={parseGermanDate}
             clearable
+            allowDeselect={false}
             value={toDate}
             onChange={setToDate}
           />

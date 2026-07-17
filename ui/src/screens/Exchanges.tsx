@@ -47,7 +47,6 @@ export function Exchanges() {
       apiPath="/api/exchanges"
       fields={fields}
       mobileCards
-      autoPoll={5000}
       defaultSort={{ field: 'createdAt', direction: 'desc' }}
       rowExpansion={{
         content: (record) => (

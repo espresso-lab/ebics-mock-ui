@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@espresso-lab/mantine-data-table": "^2.3.2",
+    "@espresso-lab/mantine-data-table": "^2.3.4",
     "@mantine/core": "^9.5.1",
     "@mantine/dates": "^9.5.1",
     "@mantine/form": "^9.5.1",

@@ -2,6 +2,8 @@ export type EbicsKeyType = 'A006' | 'X002' | 'E002'
 
 export type InitState = 'NEW' | 'RECEIVED' | 'DONE'
 export type HpbState = 'PENDING' | 'DELIVERED'
+export type SignatureClass = 'E' | 'A' | 'B' | 'T'
+export const SIGNATURE_CLASSES: readonly SignatureClass[] = ['E', 'A', 'B', 'T']
 
 export interface Participant {
   id: string
@@ -13,6 +15,8 @@ export interface Participant {
   hiaState: InitState
   hpbState: HpbState
   activated: boolean
+  signatureClass: SignatureClass
+  signatureClassDisclosed: boolean
   createdAt: string
 }
 
@@ -97,11 +101,25 @@ export interface Statement {
   createdAt: string
 }
 
+export type HacAction =
+  | 'FILE_UPLOAD'
+  | 'FILE_DOWNLOAD'
+  | 'ES_UPLOAD'
+  | 'ES_VERIFICATION'
+  | 'VEU_FORWARDING'
+  | 'VEU_VERIFICATION'
+  | 'VEU_VERIFICATION_END'
+  | 'VEU_CANCEL_ORDER'
+  | 'ORDER_HAC_FINAL_POS'
+  | 'ORDER_HAC_FINAL_NEG'
+
 export interface ProtocolEntry {
   id: string
   participantId: string | null
   orderType: string
   orderId: string | null
+  action: HacAction
+  reasonCode: string
   returnCode: string
   reasonText: string
   createdAt: string

@@ -3,6 +3,7 @@ import { config } from '../config.js'
 import type { Store } from '../db/store.js'
 import { requireBankKey } from './bank.js'
 import { ebicsPublicKeyDigest, encryptOrderData, selfSignedCertificateB64 } from './crypto.js'
+import { buildHacPain002, protocol } from './hac.js'
 import { buildHaaResponseOrderData, buildHpbResponseOrderData, buildHtdResponseOrderData } from './orderdata.js'
 import { RETURN } from './namespaces.js'
 import type { ParsedRequest } from './request.js'
@@ -106,7 +107,7 @@ function handleRequest(store: Store, parsed: ParsedRequest): HandlerResult {
       return respondDownload(store, participant, 'HAA', utf8(buildHaaResponseOrderData()))
     case 'HAC':
     case 'PTK':
-      return respondDownload(store, participant, parsed.orderType, utf8(buildProtocolOrderData(store, participant)))
+      return respondDownload(store, participant, parsed.orderType, utf8(buildHacPain002(config.hostId, participant, store.listProtocol(participant.id))))
     case 'BTD':
       return handleBtdInitialisation(store, parsed, participant, (p, t, x) => respondDownload(store, p, 'BTD', x, t))
     case 'BTU':
@@ -202,19 +203,9 @@ function htdContext(store: Store, participant: Participant) {
     userName: participant.userName || participant.userId,
     partnerName: participant.partnerId,
     accounts: bound.length > 0 ? bound : store.listAccounts(),
+    signatureClass: participant.signatureClass,
+    signatureClassDisclosed: participant.signatureClassDisclosed,
   }
-}
-
-function buildProtocolOrderData(store: Store, participant: Participant): string {
-  const entries = store
-    .listProtocol(participant.id)
-    .slice(0, 50)
-    .map(
-      (e) =>
-        `<Action OrderType="${e.orderType}" ${e.orderId ? `OrderID="${e.orderId}"` : ''}><ReturnCode>${e.returnCode}</ReturnCode><Timestamp>${e.createdAt}</Timestamp></Action>`,
-    )
-    .join('')
-  return `<HACResponseOrderData xmlns="urn:org:ebics:H005">${entries}</HACResponseOrderData>`
 }
 
 function downloadError(store: Store): string {
@@ -233,10 +224,6 @@ function errorResult(store: Store, parsed: ParsedRequest, code: string): Handler
 function keyMgmtError(store: Store, _parsed: ParsedRequest, participant: Participant, orderType: string): HandlerResult {
   protocol(store, participant.id, orderType, RETURN.INTERNAL_ERROR)
   return result(buildKeyManagementResponse(RETURN.INTERNAL_ERROR), participant.id, orderType, '', RETURN.INTERNAL_ERROR, null)
-}
-
-export function protocol(store: Store, participantId: string | null, orderType: string, returnCode: string, orderId: string | null = null) {
-  store.addProtocol({ participantId, orderType, orderId, returnCode, reasonText: returnCode === RETURN.OK ? 'OK' : '' })
 }
 
 export { newOrderId }

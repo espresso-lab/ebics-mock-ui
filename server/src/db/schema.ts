@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS participant (
   hia_state TEXT NOT NULL DEFAULT 'NEW',
   hpb_state TEXT NOT NULL DEFAULT 'PENDING',
   activated INTEGER NOT NULL DEFAULT 0,
+  signature_class TEXT NOT NULL DEFAULT 'E',
+  signature_class_disclosed INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   UNIQUE (host_id, partner_id, user_id)
 );
@@ -113,6 +115,8 @@ CREATE TABLE IF NOT EXISTS protocol (
   participant_id TEXT,
   order_type TEXT NOT NULL,
   order_id TEXT,
+  action TEXT NOT NULL DEFAULT '',
+  reason_code TEXT NOT NULL DEFAULT '',
   return_code TEXT NOT NULL,
   reason_text TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL

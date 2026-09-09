@@ -36,3 +36,26 @@ describe('parseRequest BTD DateRange', () => {
     expect(parsed.dateEnd).toBeUndefined()
   })
 })
+
+describe('parseRequest BTU SignatureFlag', () => {
+  const btu = (signatureFlag: string) =>
+    `<urn:ebicsRequest xmlns:urn="urn:org:ebics:H005" Version="H005" Revision="1">` +
+    `<urn:header authenticate="true"><urn:static><urn:HostID>MOCKBANK</urn:HostID>` +
+    `<urn:PartnerID>MV1</urn:PartnerID><urn:UserID>U1</urn:UserID>` +
+    `<urn:OrderDetails><urn:AdminOrderType>BTU</urn:AdminOrderType><urn:BTUOrderParams>` +
+    `<urn:Service><urn:ServiceName>SCT</urn:ServiceName><urn:Scope>DE</urn:Scope><urn:MsgName>pain.001</urn:MsgName></urn:Service>` +
+    signatureFlag +
+    `</urn:BTUOrderParams></urn:OrderDetails></urn:static>` +
+    `<urn:mutable><urn:TransactionPhase>Initialisation</urn:TransactionPhase></urn:mutable></urn:header><urn:body/></urn:ebicsRequest>`
+
+  it('reads requestEDS from the signature flag the banking-service sends', () => {
+    const parsed = parseRequest(btu('<urn:SignatureFlag requestEDS="true"/>'))
+    expect(parsed.signatureFlag).toBe(true)
+    expect(parsed.requestEds).toBe(true)
+  })
+
+  it('distinguishes a plain signature flag from a missing one', () => {
+    expect(parseRequest(btu('<urn:SignatureFlag/>'))).toMatchObject({ signatureFlag: true, requestEds: false })
+    expect(parseRequest(btu(''))).toMatchObject({ signatureFlag: false, requestEds: false })
+  })
+})

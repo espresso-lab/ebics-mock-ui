@@ -7,6 +7,7 @@ import type {
   CreditDebit,
   EbicsKeyType,
   Exchange,
+  HacAction,
   HpbState,
   InitState,
   Order,
@@ -15,6 +16,7 @@ import type {
   Participant,
   ParticipantKey,
   ProtocolEntry,
+  SignatureClass,
   Statement,
   VeuOrder,
 } from '@ebics-mock/shared'
@@ -60,9 +62,18 @@ export class Store {
       this.db.exec('ALTER TABLE participant ADD COLUMN activated INTEGER NOT NULL DEFAULT 0')
       this.db.exec("UPDATE participant SET activated = 1 WHERE hpb_state = 'DELIVERED'")
     }
+    if (!columns.some((c) => c.name === 'signature_class')) {
+      this.db.exec("ALTER TABLE participant ADD COLUMN signature_class TEXT NOT NULL DEFAULT 'E'")
+      this.db.exec('ALTER TABLE participant ADD COLUMN signature_class_disclosed INTEGER NOT NULL DEFAULT 1')
+    }
     const bookingColumns = this.db.prepare('PRAGMA table_info(booking)').all() as { name: string }[]
     if (!bookingColumns.some((c) => c.name === 'end_to_end_id')) {
       this.db.exec("ALTER TABLE booking ADD COLUMN end_to_end_id TEXT NOT NULL DEFAULT ''")
+    }
+    const protocolColumns = this.db.prepare('PRAGMA table_info(protocol)').all() as { name: string }[]
+    if (!protocolColumns.some((c) => c.name === 'action')) {
+      this.db.exec("ALTER TABLE protocol ADD COLUMN action TEXT NOT NULL DEFAULT ''")
+      this.db.exec("ALTER TABLE protocol ADD COLUMN reason_code TEXT NOT NULL DEFAULT ''")
     }
   }
 
@@ -135,6 +146,14 @@ export class Store {
 
   setUserName(id: string, userName: string) {
     if (userName) this.db.prepare('UPDATE participant SET user_name = ? WHERE id = ?').run(userName, id)
+  }
+
+  setSignatureClass(id: string, signatureClass: SignatureClass) {
+    this.db.prepare('UPDATE participant SET signature_class = ? WHERE id = ?').run(signatureClass, id)
+  }
+
+  setSignatureClassDisclosed(id: string, disclosed: boolean) {
+    this.db.prepare('UPDATE participant SET signature_class_disclosed = ? WHERE id = ?').run(disclosed ? 1 : 0, id)
   }
 
   setParticipantKey(participantId: string, type: EbicsKeyType, publicKeyPem: string, digest: string) {
@@ -300,6 +319,11 @@ export class Store {
     return (this.db.prepare('SELECT * FROM upload_order ORDER BY created_at DESC').all() as Row[]).map(mapOrder)
   }
 
+  getOrderByOrderId(orderId: string): Order | undefined {
+    const r = this.db.prepare('SELECT * FROM upload_order WHERE order_id = ?').get(orderId) as Row | undefined
+    return r ? mapOrder(r) : undefined
+  }
+
   getOrder(id: string): Order | undefined {
     const r = this.db.prepare('SELECT * FROM upload_order WHERE id = ?').get(id) as Row | undefined
     if (!r) return undefined
@@ -368,23 +392,35 @@ export class Store {
     participantId: string | null
     orderType: string
     orderId: string | null
+    action: HacAction
+    reasonCode: string
     returnCode: string
     reasonText: string
   }) {
     this.db
       .prepare(
-        `INSERT INTO protocol (id, participant_id, order_type, order_id, return_code, reason_text, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO protocol (id, participant_id, order_type, order_id, action, reason_code, return_code, reason_text, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(randomUUID(), input.participantId, input.orderType, input.orderId, input.returnCode, input.reasonText, now())
+      .run(
+        randomUUID(),
+        input.participantId,
+        input.orderType,
+        input.orderId,
+        input.action,
+        input.reasonCode,
+        input.returnCode,
+        input.reasonText,
+        now(),
+      )
   }
 
   listProtocol(participantId?: string): ProtocolEntry[] {
     const rows = participantId
       ? (this.db
-          .prepare('SELECT * FROM protocol WHERE participant_id = ? ORDER BY created_at DESC')
+          .prepare('SELECT * FROM protocol WHERE participant_id = ? ORDER BY created_at DESC, rowid DESC')
           .all(participantId) as Row[])
-      : (this.db.prepare('SELECT * FROM protocol ORDER BY created_at DESC LIMIT 500').all() as Row[])
+      : (this.db.prepare('SELECT * FROM protocol ORDER BY created_at DESC, rowid DESC LIMIT 500').all() as Row[])
     return rows.map(mapProtocol)
   }
 
@@ -431,15 +467,26 @@ export class Store {
     totalAmount: string
     currency: string
     signaturesRequired: number
+    signaturesDone?: number
   }): VeuOrder {
     const id = randomUUID()
     this.db
       .prepare(
         `INSERT INTO veu_order (id, order_id, participant_id, kind, total_amount, currency,
            signatures_done, signatures_required, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'OPEN', ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?)`,
       )
-      .run(id, input.orderId, input.participantId, input.kind, input.totalAmount, input.currency, input.signaturesRequired, now())
+      .run(
+        id,
+        input.orderId,
+        input.participantId,
+        input.kind,
+        input.totalAmount,
+        input.currency,
+        input.signaturesDone ?? 1,
+        input.signaturesRequired,
+        now(),
+      )
     return this.getVeu(id)!
   }
 
@@ -451,6 +498,10 @@ export class Store {
   getVeuByOrderId(orderId: string): VeuOrder | undefined {
     const r = this.db.prepare('SELECT * FROM veu_order WHERE order_id = ?').get(orderId) as Row | undefined
     return r ? mapVeu(r) : undefined
+  }
+
+  listVeu(): VeuOrder[] {
+    return (this.db.prepare('SELECT * FROM veu_order ORDER BY created_at DESC').all() as Row[]).map(mapVeu)
   }
 
   listOpenVeu(): VeuOrder[] {
@@ -571,6 +622,8 @@ function mapParticipant(r: Row): Participant {
     hiaState: r.hia_state as InitState,
     hpbState: r.hpb_state as HpbState,
     activated: r.activated === 1,
+    signatureClass: r.signature_class as SignatureClass,
+    signatureClassDisclosed: r.signature_class_disclosed !== 0,
     createdAt: str(r.created_at),
   }
 }
@@ -660,6 +713,8 @@ function mapProtocol(r: Row): ProtocolEntry {
     participantId: r.participant_id ? str(r.participant_id) : null,
     orderType: str(r.order_type),
     orderId: r.order_id ? str(r.order_id) : null,
+    action: str(r.action) as HacAction,
+    reasonCode: str(r.reason_code),
     returnCode: str(r.return_code),
     reasonText: str(r.reason_text),
     createdAt: str(r.created_at),

@@ -3,10 +3,11 @@ import type { Store } from '../db/store.js'
 import { requireBankKey } from './bank.js'
 import { aesDecryptInflate, decryptTransactionKey } from './crypto.js'
 import { verifyOrderSignature } from './es.js'
+import { type HacStep, REASON, protocol, step } from './hac.js'
 import type { HandlerResult } from './handlers.js'
-import { newOrderId, protocol } from './handlers.js'
+import { newOrderId } from './handlers.js'
 import { RETURN } from './namespaces.js'
-import { parsePain } from './pain.js'
+import { type ParsedPain, parsePain } from './pain.js'
 import type { ParsedRequest } from './request.js'
 import { buildEbicsResponse, newTransactionId } from './responses.js'
 
@@ -15,11 +16,16 @@ interface UploadMeta {
   orderId: string
   serviceName: string
   signatureData?: string
+  parkForVeu: boolean
 }
 
 export function handleBtuInitialisation(store: Store, parsed: ParsedRequest, participant: Participant): HandlerResult {
   const bankE002 = requireBankKey(store, 'E002')
-  if (!parsed.transactionKey) return uploadError(store, participant, parsed.orderType)
+  if (!parsed.transactionKey) return uploadError(store, participant, RETURN.INTERNAL_ERROR)
+  const transportOnly = participant.signatureClass === 'T'
+  if (transportOnly && !parsed.requestEds) {
+    return uploadError(store, participant, RETURN.AUTHORISATION_ORDER_IDENTIFIER_FAILED, step('ES_VERIFICATION', REASON.NOT_ALLOWED_PAYMENT))
+  }
 
   const tek = decryptTransactionKey(parsed.transactionKey, bankE002.privateKeyPem)
   const orderId = newOrderId()
@@ -29,6 +35,7 @@ export function handleBtuInitialisation(store: Store, parsed: ParsedRequest, par
     orderId,
     serviceName: parsed.btf?.serviceName ?? 'SCT',
     signatureData: parsed.signatureData?.toString('base64'),
+    parkForVeu: transportOnly,
   }
   store.createTransactionState({
     transactionId: txId,
@@ -100,9 +107,11 @@ function finalize(store: Store, participantId: string | null, transactionId: str
       totalAmount: pain.totalAmount,
       currency: pain.currency,
       rawPain: painXml,
+      status: meta.parkForVeu ? 'PENDING_VEU' : 'RECEIVED',
     })
     pain.items.forEach((item) => store.addOrderItem(orderDbId, item))
     protocol(store, participantId, 'BTU', RETURN.OK, meta.orderId)
+    if (meta.parkForVeu) parkForVeu(store, participantId ?? '', meta.orderId, pain)
   }
 
   store.deleteTransactionState(transactionId)
@@ -116,9 +125,23 @@ function finalize(store: Store, participantId: string | null, transactionId: str
   return { xml, participantId, orderType: 'BTU', phase: 'Transfer', returnCode: RETURN.OK, transactionId }
 }
 
-function uploadError(store: Store, participant: Participant, orderType: string): HandlerResult {
-  protocol(store, participant.id, orderType, RETURN.INTERNAL_ERROR)
+function parkForVeu(store: Store, participantId: string, orderId: string, pain: ParsedPain) {
+  store.createVeu({
+    orderId,
+    participantId,
+    kind: pain.kind,
+    totalAmount: pain.totalAmount,
+    currency: pain.currency,
+    signaturesRequired: 1,
+    signaturesDone: 0,
+  })
+  protocol(store, participantId, 'BTU', RETURN.OK, orderId, step('ES_VERIFICATION', REASON.SIGNATURES_CORRECT))
+  protocol(store, participantId, 'BTU', RETURN.OK, orderId, step('VEU_FORWARDING', REASON.TRANSFERRED_TO_VEU))
+}
+
+function uploadError(store: Store, participant: Participant, returnCode: string, hac?: HacStep): HandlerResult {
+  protocol(store, participant.id, 'BTU', returnCode, null, hac)
   const bank = requireBankKey(store, 'X002')
-  const xml = buildEbicsResponse({ phase: 'Initialisation', bankX002Priv: bank.privateKeyPem, returnCode: RETURN.INTERNAL_ERROR })
-  return { xml, participantId: participant.id, orderType, phase: 'Initialisation', returnCode: RETURN.INTERNAL_ERROR, transactionId: null }
+  const xml = buildEbicsResponse({ phase: 'Initialisation', bankX002Priv: bank.privateKeyPem, returnCode })
+  return { xml, participantId: participant.id, orderType: 'BTU', phase: 'Initialisation', returnCode, transactionId: null }
 }

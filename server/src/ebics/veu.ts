@@ -3,8 +3,8 @@ import type { Store } from '../db/store.js'
 import { requireBankKey } from './bank.js'
 import { bookOrder } from './booking.js'
 import { sha256 } from './crypto.js'
+import { type HacStep, REASON, protocol, step } from './hac.js'
 import type { HandlerResult, RespondDownload } from './handlers.js'
-import { protocol } from './handlers.js'
 import { RETURN } from './namespaces.js'
 import type { ParsedRequest } from './request.js'
 import { buildEbicsResponse } from './responses.js'
@@ -18,6 +18,7 @@ export function handleVeuInitialisation(
   participant: Participant,
   respond: RespondDownload,
 ): HandlerResult {
+  if (participant.signatureClass === 'T') return rejectTransportOnly(store, participant, parsed.orderType)
   switch (parsed.orderType) {
     case 'HVU':
     case 'HVZ': {
@@ -37,6 +38,19 @@ export function handleVeuInitialisation(
       return cancelOrder(store, participant, parsed)
     default:
       return veuNoData(store, participant, parsed.orderType)
+  }
+}
+
+function rejectTransportOnly(store: Store, participant: Participant, orderType: string): HandlerResult {
+  switch (orderType) {
+    case 'HVU':
+    case 'HVZ':
+      return veuNoData(store, participant, orderType)
+    case 'HVD':
+    case 'HVT':
+      return veuError(store, participant, orderType, RETURN.DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED)
+    default:
+      return veuError(store, participant, orderType, RETURN.AUTHORISATION_ORDER_IDENTIFIER_FAILED)
   }
 }
 
@@ -86,41 +100,60 @@ function buildHvdResponseOrderData(veu: VeuOrder): string {
 function signOrder(store: Store, participant: Participant, parsed: ParsedRequest): HandlerResult {
   const veu = findVeu(store, parsed)
   if (veu) {
-    const done = veu.signaturesDone + 1
-    const status: VeuOrder['status'] = done >= veu.signaturesRequired ? 'SIGNED' : 'OPEN'
-    store.updateVeu(veu.id, done, status)
-    if (status === 'SIGNED') executeAuthorizedOrder(store, veu.orderId)
+    approveVeu(store, veu)
     protocol(store, participant.id, 'HVE', RETURN.OK, veu.orderId)
   }
   return ok(store, participant, 'HVE')
 }
 
-function executeAuthorizedOrder(store: Store, orderId: string) {
-  const id = orderDbId(store, orderId)
-  try {
-    bookOrder(store, id)
-  } catch {
-    store.setOrderStatus(id, 'BOOKED')
-  }
-}
-
 function cancelOrder(store: Store, participant: Participant, parsed: ParsedRequest): HandlerResult {
   const veu = findVeu(store, parsed)
   if (veu) {
-    store.updateVeu(veu.id, veu.signaturesDone, 'CANCELLED')
-    store.setOrderStatus(orderDbId(store, veu.orderId), 'REJECTED')
+    cancelVeu(store, veu)
     protocol(store, participant.id, 'HVS', RETURN.OK, veu.orderId)
   }
   return ok(store, participant, 'HVS')
 }
 
+export function approveVeu(store: Store, veu: VeuOrder): VeuOrder {
+  const signaturesDone = veu.signaturesDone + 1
+  const signed = signaturesDone >= veu.signaturesRequired
+  store.updateVeu(veu.id, signaturesDone, signed ? 'SIGNED' : 'OPEN')
+  orderStep(store, veu, step('VEU_VERIFICATION', REASON.SIGNATURES_CORRECT))
+  if (signed) {
+    executeAuthorizedOrder(store, veu.orderId)
+    orderStep(store, veu, step('VEU_VERIFICATION_END', REASON.FORWARDED_FOR_POSTPROCESSING))
+    orderStep(store, veu, step('ORDER_HAC_FINAL_POS'))
+  }
+  return store.getVeu(veu.id)!
+}
+
+export function cancelVeu(store: Store, veu: VeuOrder): VeuOrder {
+  store.updateVeu(veu.id, veu.signaturesDone, 'CANCELLED')
+  const order = store.getOrderByOrderId(veu.orderId)
+  if (order) store.setOrderStatus(order.id, 'REJECTED')
+  orderStep(store, veu, step('VEU_CANCEL_ORDER', REASON.ORDER_CANCELLED))
+  orderStep(store, veu, step('ORDER_HAC_FINAL_NEG'))
+  return store.getVeu(veu.id)!
+}
+
+function orderStep(store: Store, veu: VeuOrder, hac: HacStep) {
+  protocol(store, veu.participantId, 'BTU', RETURN.OK, veu.orderId, hac)
+}
+
+function executeAuthorizedOrder(store: Store, orderId: string) {
+  const order = store.getOrderByOrderId(orderId)
+  if (!order) return
+  try {
+    bookOrder(store, order.id)
+  } catch {
+    store.setOrderStatus(order.id, 'BOOKED')
+  }
+}
+
 function findVeu(store: Store, parsed: ParsedRequest): VeuOrder | undefined {
   const orderId = textOf(parsed.doc, 'OrderID')
   return orderId ? store.getVeuByOrderId(orderId) : store.listOpenVeu()[0]
-}
-
-function orderDbId(store: Store, orderId: string): string {
-  return store.listOrders().find((o) => o.orderId === orderId)?.id ?? ''
 }
 
 function ok(store: Store, participant: Participant, orderType: string): HandlerResult {
@@ -130,8 +163,12 @@ function ok(store: Store, participant: Participant, orderType: string): HandlerR
 }
 
 function veuNoData(store: Store, participant: Participant, orderType: string): HandlerResult {
-  protocol(store, participant.id, orderType, RETURN.NO_DOWNLOAD_DATA)
+  return veuError(store, participant, orderType, RETURN.NO_DOWNLOAD_DATA, RETURN.OK)
+}
+
+function veuError(store: Store, participant: Participant, orderType: string, returnCode: string, headerReturnCode = returnCode): HandlerResult {
+  protocol(store, participant.id, orderType, returnCode)
   const bank = requireBankKey(store, 'X002')
-  const xml = buildEbicsResponse({ phase: 'Initialisation', bankX002Priv: bank.privateKeyPem, headerReturnCode: RETURN.OK, returnCode: RETURN.NO_DOWNLOAD_DATA })
-  return { xml, participantId: participant.id, orderType, phase: 'Initialisation', returnCode: RETURN.NO_DOWNLOAD_DATA, transactionId: null }
+  const xml = buildEbicsResponse({ phase: 'Initialisation', bankX002Priv: bank.privateKeyPem, headerReturnCode, returnCode })
+  return { xml, participantId: participant.id, orderType, phase: 'Initialisation', returnCode, transactionId: null }
 }

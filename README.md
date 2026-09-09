@@ -52,10 +52,12 @@ unter *Teilnehmer*. `A360_LIVE_MODE` ist irrelevant, es geht nichts an eine echt
 |---|---|
 | Versionshandshake | HEV |
 | Schlüsselinitialisierung | INI, HIA, HPB |
-| Teilnehmer-/Bankdaten | HTD, HAA, HAC, PTK |
+| Teilnehmer-/Bankdaten | HTD (mit `AuthorisationLevel` je Teilnehmer), HAA |
+| Kundenprotokoll | HAC, PTK als **pain.002** (`OrgnlPmtInfId` = Art der Aktion, `Rsn/Cd` = Ergebnis, Ende-Kennzeichen `ORDER_HAC_FINAL_POS/NEG`) |
 | Download | BTD (`EOP/DE/camt.053/ZIP`) |
-| Upload | BTU (`SCT/pain.001`, `SDD/pain.008`) |
-| Verteilte Unterschrift | HVU, HVD, HVE, HVS |
+| Upload | BTU (`SCT/pain.001`, `SDD/pain.008`), `SignatureFlag/@requestEDS` |
+| Verteilte Unterschrift | HVU, HVZ, HVD, HVT, HVE, HVS |
+| Unterschriftsklassen | E/A/B/T je Teilnehmer, T-Aufträge werden in der VEU-Mappe geparkt (siehe unten) |
 | Transaktionen | Initialisation / Transfer / Receipt, Segmentierung |
 
 Die Krypto ist echt: RSA-2048, A006 (RSASSA-PSS, Doppel-Hash), E002-Verschlüsselung
@@ -73,16 +75,47 @@ verifiziert.
 > echten `org.kopi.ebics`-Client (Apache Santuario) ist der einzige Punkt, den nur ein echter
 > Lauf gegen den banking-service final bestätigt.
 
+## Unterschriftsklassen (Typ T)
+
+Jeder Teilnehmer trägt eine **Unterschriftsklasse** `E`, `A`, `B` oder `T` (Default `E`, Spalte
+*Unterschriftsklasse* unter *Teilnehmer*). Sie wird im HTD als `UserInfo/Permission/@AuthorisationLevel`
+an den BTU-Berechtigungen ausgewiesen (an Downloads nie, § 9.4); `PartnerInfo/OrderInfo/NumSigRequired`
+bleibt 1. Der Schalter *Klasse im HTD ausweisen* simuliert eine Bank, die das optionale Attribut weglässt.
+
+Ein Teilnehmer der Klasse **T** (Transportunterschrift, EBICS 3.0.2 § 3.12/3.14/8.x) verhält sich so:
+
+| Auftrag | Reaktion der Mock-Bank |
+|---|---|
+| BTU mit `SignatureFlag requestEDS="true"` | angenommen, **nicht ausgeführt**: Auftrag `PENDING_VEU`, `VeuOrder` 0/1 offen, HAC `FILE_UPLOAD`/TS01 → `ES_VERIFICATION`/DS01 → `VEU_FORWARDING`/DS06 |
+| BTU ohne `requestEDS` | `090003 EBICS_AUTHORISATION_ORDER_IDENTIFIER_FAILED`, HAC `ES_VERIFICATION`/DS0G |
+| HVU, HVZ | `090005` (keine Daten — ein T-Teilnehmer ist nie unterschriftsberechtigt) |
+| HVD, HVT | `091007 EBICS_DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED` |
+| HVE, HVS | `090003` |
+
+Die Freigabe übernimmt unter *VEU / Freigaben* die Bank-App: **Freigeben (Bank-App)** signiert und
+verbucht den Auftrag (HAC `VEU_VERIFICATION`/DS01, `VEU_VERIFICATION_END`/DS05, `ORDER_HAC_FINAL_POS`),
+**Stornieren** weist ihn ab (`VEU_CANCEL_ORDER`/DS02, `ORDER_HAC_FINAL_NEG`). E/A/B-Teilnehmer verhalten
+sich wie bisher (eine Unterschrift genügt, Auftrag sofort `RECEIVED`).
+
+Admin-API:
+
+```
+PUT  /api/participants/:id/signature-class   { "signatureClass": "T", "disclosed": true }   (beide optional)
+POST /api/participants/simulate               { "signatureClass": "T" }                      (optional, Default E)
+GET  /api/veu                                 alle VEU-Aufträge inkl. SIGNED/CANCELLED
+POST /api/veu/:id/approve  |  POST /api/veu/:id/cancel                                      (409 wenn nicht OPEN)
+```
+
 ## UI
 
 Alle Listen sind `mantine-data-table` mit Aufklapp-Details:
 
-- **Teilnehmer** — INI/HIA/HPB-Ampel + empfangene Schlüssel-Hashes
+- **Teilnehmer** — INI/HIA/HPB-Ampel, Unterschriftsklasse (E/A/B/T) + HTD-Ausweis-Schalter, empfangene Schlüssel-Hashes
 - **Konten & Umsätze** — Konten + Buchungen anlegen/bearbeiten/löschen; *camt importieren* lädt echte camt.053-Umsätze hoch; Auswahl → *Auszug erzeugen* baut einen camt.053. Teilnehmer/Aufträge/Auszüge/VEU sind löschbar (zum Aufräumen)
 - **Eingereichte Aufträge** — per BTU eingereichte pain.001/008, entschlüsselt + geparst, mit Einzelposten und Roh-pain; die bankfachliche A006-Signatur (ES) wird verifiziert (gültig/ungültig/n.v.)
 - **Kontoauszüge** — erzeugte camt.053 (AVAILABLE/FETCHED), Inline-Anzeige
-- **VEU / Freigaben** — offene verteilte Unterschriften
-- **Kundenprotokoll** — chronologisches HAC-Protokoll
+- **VEU / Freigaben** — verteilte Unterschriften; *Freigeben (Bank-App)* / *Stornieren* simulieren die Freigabe eines T-Auftrags
+- **Kundenprotokoll** — chronologisches HAC-Protokoll, je Zeile ein pain.002-Schritt (Aktion + Ergebniscode)
 - **Verkehr** — jeder Request/Response als Roh-XML (Debugging)
 - **Bank-Schlüssel** — das HPB-Material + PEM
 

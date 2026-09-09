@@ -36,6 +36,8 @@ export interface ParsedRequest {
   btf?: Btf
   dateStart?: string
   dateEnd?: string
+  signatureFlag: boolean
+  requestEds: boolean
   phase: Phase
   transactionId: string
   segmentNumber: number
@@ -100,6 +102,7 @@ export function parseRequest(xml: string): ParsedRequest {
   const dateStart = dateRange ? textOf(dateRange, 'Start').slice(0, 10) : ''
   const dateEnd = dateRange ? textOf(dateRange, 'End').slice(0, 10) : ''
   const orderType = adminOrderType || (root === 'ebicsHEVRequest' ? 'HEV' : '')
+  const signatureFlag = orderDetails ? byLocalName(orderDetails, 'SignatureFlag') : undefined
 
   const mutable = header ? byLocalName(header, 'mutable') : undefined
   const phase = (mutable ? textOf(mutable, 'TransactionPhase') : '') as Phase
@@ -117,6 +120,8 @@ export function parseRequest(xml: string): ParsedRequest {
     btf,
     dateStart: dateStart || undefined,
     dateEnd: dateEnd || undefined,
+    signatureFlag: signatureFlag !== undefined,
+    requestEds: signatureFlag ? attrOf(signatureFlag, 'requestEDS') === 'true' : false,
     phase,
     transactionId: textOf(doc, 'TransactionID'),
     segmentNumber: Number(textOf(doc, 'SegmentNumber') || '0'),

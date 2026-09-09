@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
-import type { Account, Booking, CreditDebit } from '@ebics-mock/shared'
+import { type Account, type Booking, type CreditDebit, SIGNATURE_CLASSES, type SignatureClass, type VeuOrder } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { bookOrder } from '../ebics/booking.js'
 import { generateCamt053 } from '../ebics/camt.js'
 import { parseCamtBookings } from '../ebics/camtImport.js'
 import { ebicsPublicKeyDigest, generateRsaKeyPair } from '../ebics/crypto.js'
+import { approveVeu, cancelVeu } from '../ebics/veu.js'
 
 function signed(booking: Booking): number {
   return booking.creditDebit === 'CRDT' ? Number(booking.amount) : -Number(booking.amount)
@@ -18,6 +19,10 @@ function creditDebitOf(value: unknown): CreditDebit {
 function moneyOf(value: unknown): string {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric.toFixed(2) : '0.00'
+}
+
+function signatureClassOf(value: unknown): SignatureClass | undefined {
+  return SIGNATURE_CLASSES.find((c) => c === value)
 }
 
 export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
@@ -43,8 +48,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     return store.findOrCreateParticipant(hostId, body.partnerId, body.userId)
   })
 
-  app.post('/api/participants/simulate', (req) => {
-    const body = (req.body ?? {}) as { hostId?: string; partnerId?: string; userId?: string }
+  app.post('/api/participants/simulate', (req, reply) => {
+    const body = (req.body ?? {}) as { hostId?: string; partnerId?: string; userId?: string; signatureClass?: string }
+    const signatureClass = signatureClassOf(body.signatureClass ?? 'E')
+    if (!signatureClass) return reply.code(400).send({ error: 'signatureClass must be one of E, A, B, T' })
     const suffix = randomBytes(3).toString('hex').toUpperCase()
     const hostId = body.hostId || process.env.EBICS_HOST_ID || 'MOCKBANK'
     const participant = store.findOrCreateParticipant(hostId, body.partnerId || `MV${suffix}`, body.userId || `USER${suffix}`)
@@ -57,7 +64,21 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     store.setInitState(participant.id, 'hia_state', 'DONE')
     store.setHpbState(participant.id, 'DELIVERED')
     store.setParticipantActivated(participant.id, true)
+    store.setSignatureClass(participant.id, signatureClass)
     return store.getParticipant(participant.id)
+  })
+
+  app.put('/api/participants/:id/signature-class', (req, reply) => {
+    const id = (req.params as { id: string }).id
+    if (!store.getParticipant(id)) return reply.code(404).send({ error: 'participant not found' })
+    const body = (req.body ?? {}) as { signatureClass?: string; disclosed?: boolean }
+    if (body.signatureClass !== undefined) {
+      const signatureClass = signatureClassOf(body.signatureClass)
+      if (!signatureClass) return reply.code(400).send({ error: 'signatureClass must be one of E, A, B, T' })
+      store.setSignatureClass(id, signatureClass)
+    }
+    if (body.disclosed !== undefined) store.setSignatureClassDisclosed(id, Boolean(body.disclosed))
+    return store.getParticipant(id)
   })
 
   app.put('/api/participants/:id/activation', (req, reply) => {
@@ -215,10 +236,10 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
   app.get('/api/protocol', () => store.listProtocol())
   app.get('/api/exchanges', () => store.listExchanges())
 
-  app.get('/api/veu', () => store.listOpenVeu())
+  app.get('/api/veu', () => store.listVeu())
   app.post('/api/veu', (req, reply) => {
     const body = req.body as { orderId: string; signaturesRequired?: number }
-    const order = store.listOrders().find((o) => o.orderId === body.orderId)
+    const order = store.getOrderByOrderId(body.orderId)
     if (!order) return reply.code(404).send({ error: 'order not found' })
     store.setOrderStatus(order.id, 'PENDING_VEU')
     return store.createVeu({
@@ -230,6 +251,17 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
       signaturesRequired: body.signaturesRequired ?? 2,
     })
   })
+
+  const veuAction = (path: string, apply: (veu: VeuOrder) => VeuOrder) =>
+    app.post(path, (req, reply) => {
+      const veu = store.getVeu((req.params as { id: string }).id)
+      if (!veu) return reply.code(404).send({ error: 'veu order not found' })
+      if (veu.status !== 'OPEN') return reply.code(409).send({ error: `veu order is ${veu.status}` })
+      return apply(veu)
+    })
+
+  veuAction('/api/veu/:id/approve', (veu) => approveVeu(store, veu))
+  veuAction('/api/veu/:id/cancel', (veu) => cancelVeu(store, veu))
 
   const del = (path: string, remove: (id: string) => void) =>
     app.delete(path, (req, reply) => {

@@ -19,7 +19,9 @@ export const RETURN = {
   AUTHENTICATION_FAILED: '061001',
   INVALID_REQUEST: '061002',
   INTERNAL_ERROR: '061099',
+  AUTHORISATION_ORDER_IDENTIFIER_FAILED: '090003',
   INVALID_USER_OR_USER_STATE: '091002',
+  DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED: '091007',
   TX_UNKNOWN: '091101',
 } as const
 
@@ -31,6 +33,8 @@ export const RETURN_TEXT: Record<string, string> = {
   '061001': '[EBICS_AUTHENTICATION_FAILED] Authentifikationssignatur fehlerhaft',
   '061002': '[EBICS_INVALID_REQUEST] Nachricht nicht EBICS-konform',
   '061099': '[EBICS_INTERNAL_ERROR] interner EBICS-Fehler',
+  '090003': '[EBICS_AUTHORISATION_ORDER_IDENTIFIER_FAILED] Teilnehmer für diese Auftragsart nicht berechtigt',
   '091002': '[EBICS_INVALID_USER_OR_USER_STATE] Teilnehmer unbekannt oder Zustand unzulässig',
+  '091007': '[EBICS_DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED] keine VEU-Berechtigung',
   '091101': '[EBICS_TX_UNKNOWN_TXID] Transaktions-ID ungültig',
 }

@@ -1,4 +1,4 @@
-import type { Account } from '@ebics-mock/shared'
+import type { Account, SignatureClass } from '@ebics-mock/shared'
 import { escapeXml } from './xml.js'
 
 const ROOT_NS = `xmlns="urn:org:ebics:H005" xmlns:ds="http://www.w3.org/2000/09/xmldsig#"`
@@ -15,13 +15,13 @@ export interface OrderCatalogEntry {
   adminOrderType: 'BTD' | 'BTU' | 'HTD' | 'HAC' | 'HAA' | 'HPD' | 'HKD' | 'PTK' | 'HVU' | 'HVD' | 'HVZ' | 'HVT' | 'HVE' | 'HVS'
   service?: ServiceDef
   description: string
-  authLevel?: 'E' | 'A' | 'B' | 'T'
+  authLevel?: 'T'
 }
 
 export const ORDER_CATALOG: OrderCatalogEntry[] = [
   { adminOrderType: 'BTD', service: { serviceName: 'EOP', scope: 'DE', msgName: 'camt.053', container: 'ZIP' }, description: 'Tagesauszüge (camt.053)' },
-  { adminOrderType: 'BTU', service: { serviceName: 'SCT', scope: 'DE', msgName: 'pain.001' }, description: 'SEPA-Überweisung', authLevel: 'E' },
-  { adminOrderType: 'BTU', service: { serviceName: 'SDD', scope: 'DE', msgName: 'pain.008' }, description: 'SEPA-Lastschrift', authLevel: 'E' },
+  { adminOrderType: 'BTU', service: { serviceName: 'SCT', scope: 'DE', msgName: 'pain.001' }, description: 'SEPA-Überweisung' },
+  { adminOrderType: 'BTU', service: { serviceName: 'SDD', scope: 'DE', msgName: 'pain.008' }, description: 'SEPA-Lastschrift' },
   { adminOrderType: 'HAC', description: 'Kundenprotokoll abholen' },
   { adminOrderType: 'HTD', description: 'Kunden- und Teilnehmerdaten' },
   { adminOrderType: 'PTK', description: 'Protokolldatei' },
@@ -58,16 +58,26 @@ function serviceXml(service: ServiceDef): string {
   )
 }
 
+function isUpload(entry: OrderCatalogEntry): boolean {
+  return entry.adminOrderType === 'BTU'
+}
+
 function orderInfoXml(entry: OrderCatalogEntry): string {
   return (
     `<OrderInfo><AdminOrderType>${entry.adminOrderType}</AdminOrderType>` +
     (entry.service ? serviceXml(entry.service) : '') +
-    `<Description>${escapeXml(entry.description)}</Description><NumSigRequired>${entry.authLevel ? 1 : 0}</NumSigRequired></OrderInfo>`
+    `<Description>${escapeXml(entry.description)}</Description><NumSigRequired>${isUpload(entry) || entry.authLevel ? 1 : 0}</NumSigRequired></OrderInfo>`
   )
 }
 
-function permissionXml(entry: OrderCatalogEntry): string {
-  const level = entry.authLevel ? ` AuthorisationLevel="${entry.authLevel}"` : ''
+function authorisationLevel(entry: OrderCatalogEntry, ctx: HtdContext): string | undefined {
+  if (!isUpload(entry)) return entry.authLevel
+  return ctx.signatureClassDisclosed ? ctx.signatureClass : undefined
+}
+
+function permissionXml(entry: OrderCatalogEntry, ctx: HtdContext): string {
+  const authLevel = authorisationLevel(entry, ctx)
+  const level = authLevel ? ` AuthorisationLevel="${authLevel}"` : ''
   return (
     `<Permission${level}><AdminOrderType>${entry.adminOrderType}</AdminOrderType>` +
     (entry.service ? serviceXml(entry.service) : '') +
@@ -91,12 +101,14 @@ export interface HtdContext {
   userName: string
   partnerName: string
   accounts: Account[]
+  signatureClass: SignatureClass
+  signatureClassDisclosed: boolean
 }
 
 export function buildHtdResponseOrderData(ctx: HtdContext): string {
   const accounts = ctx.accounts.map(accountInfoXml).join('')
   const orderInfos = ORDER_CATALOG.map(orderInfoXml).join('')
-  const permissions = ORDER_CATALOG.map(permissionXml).join('')
+  const permissions = ORDER_CATALOG.map((entry) => permissionXml(entry, ctx)).join('')
   return (
     `<HTDResponseOrderData ${ROOT_NS}>` +
     `<PartnerInfo>` +

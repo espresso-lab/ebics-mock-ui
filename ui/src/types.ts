@@ -1,3 +1,5 @@
+export type SignatureClass = 'E' | 'A' | 'B' | 'T'
+
 export interface Participant {
   id: string
   hostId: string
@@ -8,6 +10,8 @@ export interface Participant {
   hiaState: 'NEW' | 'RECEIVED' | 'DONE'
   hpbState: 'PENDING' | 'DELIVERED'
   activated: boolean
+  signatureClass: SignatureClass
+  signatureClassDisclosed: boolean
   createdAt: string
 }
 
@@ -91,6 +95,8 @@ export interface ProtocolEntry {
   participantId: string | null
   orderType: string
   orderId: string | null
+  action: string
+  reasonCode: string
   returnCode: string
   reasonText: string
   createdAt: string

@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Button, Group, MultiSelect, Stack, Switch, Text } from '@mantine/core'
+import { Button, Group, MultiSelect, Select, Stack, Switch, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconUserPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { apiPost, apiPut, useApiQuery } from '../api'
 import { formField, listField } from '../components/fields'
 import { Mono, StateBadge, fmtDateTime } from '../components/ui'
-import type { Account, Participant, ParticipantKey } from '../types'
+import type { Account, Participant, ParticipantKey, SignatureClass } from '../types'
+
+const SIGNATURE_CLASSES: SignatureClass[] = ['E', 'A', 'B', 'T']
 
 function ParticipantAccounts({ participantId }: { participantId: string }) {
   const queryClient = useQueryClient()
@@ -77,6 +79,36 @@ function ActivationSwitch({ participant }: { participant: Participant }) {
   return <Switch checked={participant.activated} onChange={(event) => toggle(event.currentTarget.checked)} />
 }
 
+function SignatureClassCell({ participant }: { participant: Participant }) {
+  const queryClient = useQueryClient()
+
+  const save = (body: { signatureClass?: SignatureClass; disclosed?: boolean }) => {
+    apiPut(`/api/participants/${participant.id}/signature-class`, body)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['participants'] }))
+      .catch((error) => notifications.show({ color: 'red', message: `Speichern fehlgeschlagen: ${String(error)}` }))
+  }
+
+  return (
+    <Group gap="sm" wrap="nowrap">
+      <Select
+        data={SIGNATURE_CLASSES}
+        value={participant.signatureClass}
+        onChange={(value) => value && save({ signatureClass: value as SignatureClass })}
+        allowDeselect={false}
+        size="xs"
+        w={72}
+        aria-label="Unterschriftsklasse"
+      />
+      <Switch
+        size="xs"
+        label="Klasse im HTD ausweisen"
+        checked={participant.signatureClassDisclosed}
+        onChange={(event) => save({ disclosed: event.currentTarget.checked })}
+      />
+    </Group>
+  )
+}
+
 function KeyList({ participantId }: { participantId: string }) {
   const { data } = useApiQuery<ParticipantKey[]>(['participant-keys', participantId], `/api/participants/${participantId}/keys`)
   if (!data?.length) return <Text size="sm" c="dimmed" p="sm">Noch keine Schlüssel empfangen.</Text>
@@ -101,6 +133,7 @@ const fields: Field<Participant>[] = [
   listField('hia', { accessor: 'hiaState', title: 'HIA', render: (r) => <StateBadge value={r.hiaState} /> }),
   listField('hpb', { accessor: 'hpbState', title: 'HPB', render: (r) => <StateBadge value={r.hpbState} /> }),
   listField('activated', { accessor: 'activated', title: 'INI-Brief', render: (r) => <ActivationSwitch participant={r} /> }),
+  listField('signatureClass', { accessor: 'signatureClass', title: 'Unterschriftsklasse', render: (r) => <SignatureClassCell participant={r} /> }),
   listField('createdAt', { accessor: 'createdAt', title: 'Angelegt', render: (r) => fmtDateTime(r.createdAt) }),
 ]
 
@@ -108,7 +141,7 @@ export function Participants() {
   return (
     <DataTable<Participant>
       title="Teilnehmer"
-      titleHint="Die Bank legt den Teilnehmer mit Host-/Kunden-/Teilnehmer-ID an und übergibt diese Parameter an den Kunden; dessen banking-service initialisiert ihn dann per INI/HIA/HPB (Status NEW → DONE). HPB liefert die Bankschlüssel aber erst, wenn der INI-Brief des Teilnehmers eingegangen ist — dafür den Schalter »INI-Brief« aktivieren. »Test-Teilnehmer« simuliert den ganzen Handshake inkl. Freischaltung intern."
+      titleHint="Die Bank legt den Teilnehmer mit Host-/Kunden-/Teilnehmer-ID an und übergibt diese Parameter an den Kunden; dessen banking-service initialisiert ihn dann per INI/HIA/HPB (Status NEW → DONE). HPB liefert die Bankschlüssel aber erst, wenn der INI-Brief des Teilnehmers eingegangen ist — dafür den Schalter »INI-Brief« aktivieren. »Test-Teilnehmer« simuliert den ganzen Handshake inkl. Freischaltung intern. Die Unterschriftsklasse (E/A/B bankfachlich, T = Transportunterschrift) steht im HTD als AuthorisationLevel der BTU-Berechtigungen; ein T-Teilnehmer kann nur mit requestEDS einreichen, der Auftrag wartet dann unter VEU auf die Freigabe."
       queryKey={['participants']}
       apiPath="/api/participants"
       createButtonText="Teilnehmer anlegen"

@@ -165,7 +165,9 @@ describe('Store', () => {
       requestXml: '<r/>',
       responseXml: '<r/>',
     })
-    store.addProtocol({ participantId: null, orderType: 'BTU', orderId: 'N001', returnCode: '000000', reasonText: 'OK' })
+    store.addProtocol({ participantId: null, orderType: 'BTU', orderId: 'N001', action: 'FILE_UPLOAD', reasonCode: 'TS01', returnCode: '000000', reasonText: 'OK' })
+    expect(store.listProtocol()[0]!.action).toBe('FILE_UPLOAD')
+    expect(store.listProtocol()[0]!.reasonCode).toBe('TS01')
     expect(store.listExchanges()).toHaveLength(1)
     expect(store.listProtocol()).toHaveLength(1)
   })

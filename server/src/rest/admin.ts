@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
-import { type Account, type Booking, type CreditDebit, SIGNATURE_CLASSES, type SignatureClass, type VeuOrder } from '@ebics-mock/shared'
+import type { Account, Booking, CreditDebit, SignatureClass, VeuOrder } from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { bookOrder } from '../ebics/booking.js'
 import { generateCamt053 } from '../ebics/camt.js'
@@ -21,8 +21,10 @@ function moneyOf(value: unknown): string {
   return Number.isFinite(numeric) ? numeric.toFixed(2) : '0.00'
 }
 
+const SIGNATURE_CLASS_VALUES: Record<SignatureClass, true> = { E: true, A: true, B: true, T: true }
+
 function signatureClassOf(value: unknown): SignatureClass | undefined {
-  return SIGNATURE_CLASSES.find((c) => c === value)
+  return typeof value === 'string' && Object.hasOwn(SIGNATURE_CLASS_VALUES, value) ? (value as SignatureClass) : undefined
 }
 
 export function registerAdminRoutes(app: FastifyInstance, store: Store): void {

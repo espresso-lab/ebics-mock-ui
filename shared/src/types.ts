@@ -3,7 +3,6 @@ export type EbicsKeyType = 'A006' | 'X002' | 'E002'
 export type InitState = 'NEW' | 'RECEIVED' | 'DONE'
 export type HpbState = 'PENDING' | 'DELIVERED'
 export type SignatureClass = 'E' | 'A' | 'B' | 'T'
-export const SIGNATURE_CLASSES: readonly SignatureClass[] = ['E', 'A', 'B', 'T']
 
 export interface Participant {
   id: string

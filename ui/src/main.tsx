@@ -13,14 +13,14 @@ import '@mantine/notifications/styles.css'
 import 'mantine-datatable/styles.css'
 import './index.css'
 import { router } from './routes'
-import { theme } from './theme'
+import { cssVariablesResolver, theme } from './theme'
 import { API_BASE, getHeaders } from './config'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: 1 } } })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="auto">
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto">
       <DatesProvider settings={{ locale: 'de' }}>
         <Notifications />
         <QueryClientProvider client={queryClient}>

@@ -94,6 +94,19 @@ function accountInfoXml(account: Account, index: number): string {
   )
 }
 
+/**
+ * Real banks repeat the upload permissions once per account and set the signature class only on
+ * the first block — the DKB response of 2026-09-11 carried it on 17 of 102 BTU entries. Emitting
+ * that shape here is what makes a reader that expects the class on *every* upload permission fail
+ * against the mock instead of against a customer.
+ */
+function repeatedUploadPermissionsXml(ctx: HtdContext): string {
+  const undisclosed = { ...ctx, signatureClassDisclosed: false }
+  return ctx.accounts
+    .map(() => ORDER_CATALOG.filter(isUpload).map((entry) => permissionXml(entry, undisclosed)).join(''))
+    .join('')
+}
+
 export interface HtdContext {
   hostId: string
   partnerId: string
@@ -108,7 +121,7 @@ export interface HtdContext {
 export function buildHtdResponseOrderData(ctx: HtdContext): string {
   const accounts = ctx.accounts.map(accountInfoXml).join('')
   const orderInfos = ORDER_CATALOG.map(orderInfoXml).join('')
-  const permissions = ORDER_CATALOG.map((entry) => permissionXml(entry, ctx)).join('')
+  const permissions = ORDER_CATALOG.map((entry) => permissionXml(entry, ctx)).join('') + repeatedUploadPermissionsXml(ctx)
   return (
     `<HTDResponseOrderData ${ROOT_NS}>` +
     `<PartnerInfo>` +

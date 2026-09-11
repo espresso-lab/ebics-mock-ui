@@ -312,6 +312,7 @@ describe('EBICS handshake + flows (in-process)', () => {
       const htd = decode(response).toString('utf8')
       expect(htd).toMatch(/<Permission AuthorisationLevel="T"><AdminOrderType>BTU</)
       expect(htd).toMatch(/<Permission><AdminOrderType>BTD</)
+      expect(htd).toMatch(/<Permission><AdminOrderType>BTU</)
       await post(receipt(textOf(parseXml(response), 'TransactionID')))
     })
 

@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "babel-plugin-react-compiler": "^1.0.0",
-    "concurrently": "^10.0.4"
+    "concurrently": "^10.0.5"
   }
 }

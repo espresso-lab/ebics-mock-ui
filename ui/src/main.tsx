@@ -22,7 +22,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto">
       <DatesProvider settings={{ locale: 'de' }}>
-        <Notifications />
+        <Notifications layout="stacked" />
         <QueryClientProvider client={queryClient}>
           <DataTableProvider baseUrl={API_BASE} queryClient={queryClient} getHeaders={getHeaders}>
             <RouterProvider router={router} />

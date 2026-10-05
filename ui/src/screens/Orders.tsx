@@ -22,8 +22,8 @@ function OrderDetails({ order }: { order: Order }) {
   const { data } = useApiQuery<Order>(['order', order.id], `/api/orders/${order.id}`)
   const items = data?.items ?? []
   return (
-    <Stack p="sm" gap="sm">
-      <SubTable<OrderItem> mobile={isMobile} columns={itemColumns} records={items} withTableBorder withColumnBorders striped />
+    <Stack gap="md">
+      <SubTable<OrderItem> nested title="Posten" mobile={isMobile} columns={itemColumns} records={items} noRecordsText="Keine Posten" />
       <Spoiler maxHeight={0} showLabel="Roh-pain anzeigen" hideLabel="Roh-pain ausblenden">
         <ScrollArea h={260}>
           <Code block>{data?.rawPain ?? ''}</Code>

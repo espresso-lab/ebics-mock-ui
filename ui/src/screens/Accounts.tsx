@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Box, Button, FileButton, Group, Modal, Radio, Stack, Text } from '@mantine/core'
+import { Button, FileButton, Group, Modal, Radio, Stack, Text } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
 import { IconFileText, IconUpload } from '@tabler/icons-react'
@@ -70,10 +70,11 @@ const bookingFields: Field<Booking>[] = [
 function Bookings({ account }: { account: Account }) {
   return (
     <DataTable<Booking>
-      title={`Umsätze · ${account.iban}`}
+      nested
+      title="Umsätze"
+      entityName="Buchung"
       queryKey={['bookings', account.id]}
       apiPath={`/api/accounts/${account.id}/bookings`}
-      createButtonText="Buchung anlegen"
       buttons={[<CamtImport key="camt-import" accountId={account.id} />]}
       fields={bookingFields}
       selection
@@ -144,11 +145,7 @@ export function Accounts() {
             disabled: (records) => records.length === 0,
           },
         ]}
-        rowExpansion={{ content: (record) => (
-          <Box py="md">
-            <Bookings account={record} />
-          </Box>
-        ) }}
+        rowExpansion={{ content: (record) => <Bookings account={record} /> }}
       />
       <Modal opened={statementAccounts !== null} onClose={closeModal} title="Kontoauszug erzeugen" centered>
         <Stack>

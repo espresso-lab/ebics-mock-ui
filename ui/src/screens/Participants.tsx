@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Button, Group, MultiSelect, Select, Stack, Switch, Text } from '@mantine/core'
+import { Button, Group, MultiSelect, Select, Stack, Switch, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconUserPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -28,17 +28,17 @@ function ParticipantAccounts({ participantId }: { participantId: string }) {
   }
 
   return (
-    <Stack gap={4} p="sm">
-      <Text size="sm" fw={600}>Kontoberechtigungen</Text>
+    <Stack gap="md">
+      <Title order={4}>Kontoberechtigungen</Title>
       <MultiSelect
         data={options}
         value={value}
         onChange={onChange}
         placeholder={options.length ? 'Konten auswählen…' : 'Noch keine Konten angelegt'}
+        description="Bestimmt, welche Konten der Teilnehmer per HTD sieht (leer = alle Konten)."
         searchable
         clearable
       />
-      <Text size="xs" c="dimmed">Bestimmt, welche Konten der Teilnehmer per HTD sieht (leer = alle Konten).</Text>
     </Stack>
   )
 }
@@ -111,16 +111,22 @@ function SignatureClassCell({ participant }: { participant: Participant }) {
 
 function KeyList({ participantId }: { participantId: string }) {
   const { data } = useApiQuery<ParticipantKey[]>(['participant-keys', participantId], `/api/participants/${participantId}/keys`)
-  if (!data?.length) return <Text size="sm" c="dimmed" p="sm">Noch keine Schlüssel empfangen.</Text>
   return (
-    <Stack gap="xs" p="sm">
-      {data.map((key) => (
-        <Group key={key.id} gap="sm">
-          <Text size="sm" fw={600} w={56}>{key.type}</Text>
-          <Text size="xs" c="dimmed">SHA-256</Text>
-          <Mono value={key.digest} max={48} />
-        </Group>
-      ))}
+    <Stack gap="md">
+      <Title order={4}>Schlüssel</Title>
+      {data?.length ? (
+        <Stack gap="xs">
+          {data.map((key) => (
+            <Group key={key.id} gap="sm">
+              <Text size="sm" fw={600} w={56}>{key.type}</Text>
+              <Text size="xs" c="dimmed">SHA-256</Text>
+              <Mono value={key.digest} max={48} />
+            </Group>
+          ))}
+        </Stack>
+      ) : (
+        <Text size="sm" c="dimmed">Noch keine Schlüssel empfangen.</Text>
+      )}
     </Stack>
   )
 }
@@ -152,7 +158,7 @@ export function Participants() {
       defaultSort={{ field: 'createdAt', direction: 'desc' }}
       rowExpansion={{
         content: (record) => (
-          <Stack gap="xs">
+          <Stack gap="xl">
             <KeyList participantId={record.id} />
             <ParticipantAccounts participantId={record.id} />
           </Stack>

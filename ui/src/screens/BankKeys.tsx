@@ -1,5 +1,5 @@
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Code, ScrollArea, Stack, Text } from '@mantine/core'
+import { Code, ScrollArea, Stack, Title } from '@mantine/core'
 import { listField } from '../components/fields'
 import { Mono } from '../components/ui'
 import type { BankKey } from '../types'
@@ -22,8 +22,8 @@ export function BankKeys() {
       mobileCards
       rowExpansion={{
         content: (record) => (
-          <Stack gap={4} p="sm">
-            <Text size="xs" fw={600} c="dimmed">PUBLIC KEY (PEM)</Text>
+          <Stack gap="md">
+            <Title order={4}>Öffentlicher Schlüssel (PEM)</Title>
             <ScrollArea h={160}>
               <Code block style={{ fontSize: 11 }}>{record.publicKeyPem}</Code>
             </ScrollArea>

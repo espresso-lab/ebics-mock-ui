@@ -1,5 +1,5 @@
 import { DataTable, type Field } from '@espresso-lab/mantine-data-table'
-import { Code, ScrollArea, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Code, ScrollArea, SimpleGrid, Stack, Title } from '@mantine/core'
 import { listField } from '../components/fields'
 import { Mono, ReturnCodeBadge, fmtDateTime } from '../components/ui'
 import type { Exchange } from '../types'
@@ -20,8 +20,8 @@ function prettyXml(xml: string): string {
 
 function XmlPanel({ title, xml }: { title: string; xml: string }) {
   return (
-    <Stack gap={4}>
-      <Text size="xs" fw={600} c="dimmed">{title}</Text>
+    <Stack gap="md">
+      <Title order={4}>{title}</Title>
       <ScrollArea h={320} type="auto">
         <Code block style={{ fontSize: 11 }}>{prettyXml(xml)}</Code>
       </ScrollArea>
@@ -50,9 +50,9 @@ export function Exchanges() {
       defaultSort={{ field: 'createdAt', direction: 'desc' }}
       rowExpansion={{
         content: (record) => (
-          <SimpleGrid cols={{ base: 1, md: 2 }} p="sm" spacing="md">
-            <XmlPanel title="REQUEST" xml={record.requestXml} />
-            <XmlPanel title="RESPONSE" xml={record.responseXml} />
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <XmlPanel title="Request" xml={record.requestXml} />
+            <XmlPanel title="Response" xml={record.responseXml} />
           </SimpleGrid>
         ),
       }}

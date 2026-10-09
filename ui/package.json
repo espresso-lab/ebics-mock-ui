@@ -10,13 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@espresso-lab/mantine-data-table": "^2.5.4",
-    "@mantine/core": "^9.7.0",
-    "@mantine/dates": "^9.7.0",
-    "@mantine/form": "^9.7.0",
-    "@mantine/hooks": "^9.7.0",
-    "@mantine/notifications": "^9.7.0",
-    "@tabler/icons-react": "^3.48.0",
+    "@espresso-lab/mantine-data-table": "^2.5.5",
+    "@mantine/core": "^9.7.1",
+    "@mantine/dates": "^9.7.1",
+    "@mantine/form": "^9.7.1",
+    "@mantine/hooks": "^9.7.1",
+    "@mantine/notifications": "^9.7.1",
+    "@tabler/icons-react": "^3.49.0",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-router": "^1.170.41",
     "dayjs": "^1.11.23",
@@ -24,16 +24,16 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.6",
+    "@babel/core": "^8.0.7",
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "babel-plugin-react-compiler": "^1.0.0",
-    "oxlint": "^1.86.0",
+    "oxlint": "^1.87.0",
     "typescript": "~6.0.3",
-    "vite": "^8.3.2"
+    "vite": "^8.3.4"
   }
 }

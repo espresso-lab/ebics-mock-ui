@@ -15,6 +15,7 @@
     "@mantine/dates": "^9.7.1",
     "@mantine/form": "^9.7.1",
     "@mantine/hooks": "^9.7.1",
+    "@mantine/modals": "9.7.1",
     "@mantine/notifications": "^9.7.1",
     "@tabler/icons-react": "^3.49.0",
     "@tanstack/react-query": "^5.104.1",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@babel/core": "^8.0.7",
+    "@ebics-mock/shared": "*",
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^26.6.4",

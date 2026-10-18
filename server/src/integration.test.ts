@@ -377,6 +377,39 @@ describe('EBICS handshake + flows (in-process)', () => {
       expect(hacActions(orderId).slice(-2)).toEqual(['VEU_CANCEL_ORDER', 'ORDER_HAC_FINAL_NEG'])
     })
   })
+
+  describe('participant administration', () => {
+    it('changes signature class, disclosure, activation and account permissions in one update', async () => {
+      const participant = store.listParticipants()[0]!
+      const account = store.listAccounts()[0]!
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/participants/${participant.id}`,
+        payload: { signatureClass: 'A', signatureClassDisclosed: false, activated: false, accountIds: [account.id] },
+      })
+      expect(res.statusCode).toBe(200)
+      const expected = { signatureClass: 'A', signatureClassDisclosed: false, activated: false, accountIds: [account.id] }
+      expect(res.json()).toMatchObject(expected)
+      expect((await app.inject({ method: 'GET', url: `/api/participants/${participant.id}` })).json()).toMatchObject(expected)
+      expect((await app.inject({ method: 'GET', url: '/api/participants' })).json()[0]).toMatchObject(expected)
+    })
+
+    it('keeps everything as it was when the signature class is unknown', async () => {
+      const participant = store.listParticipants()[0]!
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/participants/${participant.id}`,
+        payload: { signatureClass: 'X', activated: true },
+      })
+      expect(res.statusCode).toBe(400)
+      expect(store.getParticipant(participant.id)).toMatchObject({ signatureClass: 'A', activated: false })
+    })
+
+    it('answers 404 for a participant the bank does not know', async () => {
+      expect((await app.inject({ method: 'GET', url: '/api/participants/unknown' })).statusCode).toBe(404)
+      expect((await app.inject({ method: 'PUT', url: '/api/participants/unknown', payload: {} })).statusCode).toBe(404)
+    })
+  })
 })
 
 function bankE002Pem(store: Store): string {

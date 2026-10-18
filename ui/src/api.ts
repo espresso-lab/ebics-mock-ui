@@ -1,34 +1,29 @@
-import { useQuery } from '@tanstack/react-query'
-import { API_BASE } from './config'
+import { useQuery } from "@tanstack/react-query";
+import { API_BASE } from "./config.ts";
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
-  return res.json() as Promise<T>
-}
-
-export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
-  return res.json() as Promise<T>
+  });
+  if (!response.ok) {
+    const problem = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(problem?.error ?? `${method} ${path}: HTTP ${response.status}`);
+  }
+  return response.json() as Promise<T>;
 }
 
-export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`)
-  return res.json() as Promise<T>
+export const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+export const apiGet = <T>(path: string) => request<T>("GET", path);
+
+export const apiPost = <T>(path: string, body?: unknown) => request<T>("POST", path, body);
+
+export const apiPut = <T>(path: string, body?: unknown) => request<T>("PUT", path, body);
+
+export function useApiQuery<T>(queryKey: string[], path: string, refetchInterval?: number) {
+  return useQuery({ queryKey, queryFn: () => apiGet<T>(path), refetchInterval });
 }
 
-export function useApiQuery<T>(key: (string | number)[], path: string, refetchInterval?: number) {
-  return useQuery({ queryKey: key, queryFn: () => apiGet<T>(path), refetchInterval })
-}
-
-export const statementContentUrl = (id: string) => `${API_BASE}/api/statements/${id}/content`
+export const statementContentUrl = (id: string) => `${API_BASE}/api/statements/${id}/content`;

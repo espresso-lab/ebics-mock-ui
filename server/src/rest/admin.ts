@@ -1,6 +1,14 @@
 import { randomBytes } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
-import type { Account, Booking, CreditDebit, SignatureClass, VeuOrder } from '@ebics-mock/shared'
+import type {
+  Account,
+  Booking,
+  CreditDebit,
+  Participant,
+  ParticipantResource,
+  SignatureClass,
+  VeuOrder,
+} from '@ebics-mock/shared'
 import type { Store } from '../db/store.js'
 import { bookOrder } from '../ebics/booking.js'
 import { generateCamt053 } from '../ebics/camt.js'
@@ -28,26 +36,43 @@ function signatureClassOf(value: unknown): SignatureClass | undefined {
 }
 
 export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
+  const resourceOf = (participant: Participant): ParticipantResource => ({
+    ...participant,
+    accountIds: store.listParticipantAccountIds(participant.id),
+  })
+
   app.get('/api/health', () => ({ status: 'ok', hostId: process.env.EBICS_HOST_ID ?? 'MOCKBANK' }))
 
-  app.get('/api/participants', () => store.listParticipants())
+  app.get('/api/participants', () => store.listParticipants().map(resourceOf))
+  app.get('/api/participants/:id', (req, reply) => {
+    const participant = store.getParticipant((req.params as { id: string }).id)
+    return participant ? resourceOf(participant) : reply.code(404).send({ error: 'participant not found' })
+  })
   app.get('/api/participants/:id/keys', (req) =>
     store.listParticipantKeys((req.params as { id: string }).id).map((k) => ({ id: `${k.participantId}-${k.type}`, ...k })),
   )
-  app.get('/api/participants/:id/accounts', (req) => store.listParticipantAccountIds((req.params as { id: string }).id))
-  app.put('/api/participants/:id/accounts', (req) => {
-    const id = (req.params as { id: string }).id
-    const body = (req.body ?? {}) as { accountIds?: string[] }
-    store.setParticipantAccounts(id, Array.isArray(body.accountIds) ? body.accountIds : [])
-    return store.listParticipantAccountIds(id)
-  })
   app.get('/api/bank-keys', () => store.listBankKeys().map((k) => ({ id: k.type, ...k })))
 
   app.post('/api/participants', (req, reply) => {
     const body = (req.body ?? {}) as { hostId?: string; partnerId?: string; userId?: string }
     if (!body.partnerId || !body.userId) return reply.code(400).send({ error: 'partnerId and userId are required' })
     const hostId = body.hostId || process.env.EBICS_HOST_ID || 'MOCKBANK'
-    return store.findOrCreateParticipant(hostId, body.partnerId, body.userId)
+    return resourceOf(store.findOrCreateParticipant(hostId, body.partnerId, body.userId))
+  })
+
+  app.put('/api/participants/:id', (req, reply) => {
+    const id = (req.params as { id: string }).id
+    if (!store.getParticipant(id)) return reply.code(404).send({ error: 'participant not found' })
+    const body = (req.body ?? {}) as Partial<Record<keyof ParticipantResource, unknown>>
+    const signatureClass = body.signatureClass === undefined ? undefined : signatureClassOf(body.signatureClass)
+    if (body.signatureClass !== undefined && !signatureClass) {
+      return reply.code(400).send({ error: 'signatureClass must be one of E, A, B, T' })
+    }
+    if (signatureClass) store.setSignatureClass(id, signatureClass)
+    if (body.signatureClassDisclosed !== undefined) store.setSignatureClassDisclosed(id, Boolean(body.signatureClassDisclosed))
+    if (body.activated !== undefined) store.setParticipantActivated(id, Boolean(body.activated))
+    if (Array.isArray(body.accountIds)) store.setParticipantAccounts(id, body.accountIds.map(String))
+    return resourceOf(store.getParticipant(id)!)
   })
 
   app.post('/api/participants/simulate', (req, reply) => {
@@ -67,28 +92,7 @@ export function registerAdminRoutes(app: FastifyInstance, store: Store): void {
     store.setHpbState(participant.id, 'DELIVERED')
     store.setParticipantActivated(participant.id, true)
     store.setSignatureClass(participant.id, signatureClass)
-    return store.getParticipant(participant.id)
-  })
-
-  app.put('/api/participants/:id/signature-class', (req, reply) => {
-    const id = (req.params as { id: string }).id
-    if (!store.getParticipant(id)) return reply.code(404).send({ error: 'participant not found' })
-    const body = (req.body ?? {}) as { signatureClass?: string; disclosed?: boolean }
-    if (body.signatureClass !== undefined) {
-      const signatureClass = signatureClassOf(body.signatureClass)
-      if (!signatureClass) return reply.code(400).send({ error: 'signatureClass must be one of E, A, B, T' })
-      store.setSignatureClass(id, signatureClass)
-    }
-    if (body.disclosed !== undefined) store.setSignatureClassDisclosed(id, Boolean(body.disclosed))
-    return store.getParticipant(id)
-  })
-
-  app.put('/api/participants/:id/activation', (req, reply) => {
-    const id = (req.params as { id: string }).id
-    if (!store.getParticipant(id)) return reply.code(404).send({ error: 'participant not found' })
-    const body = (req.body ?? {}) as { active?: boolean }
-    store.setParticipantActivated(id, Boolean(body.active))
-    return store.getParticipant(id)
+    return resourceOf(store.getParticipant(participant.id)!)
   })
 
   app.get('/api/accounts', () => store.listAccounts())

@@ -1,0 +1,6 @@
+@layer mantine, mantine-datatable;
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

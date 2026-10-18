@@ -1,0 +1,115 @@
+.chevron {
+  transition: transform 200ms ease;
+}
+
+.chevron[data-rotate] {
+  transform: rotate(90deg);
+}
+
+.card {
+  background-color: var(--mantine-color-body);
+}
+
+:where([data-mantine-color-scheme="dark"]) .segmentedRoot {
+  background-color: var(--mantine-color-dark-6);
+}
+
+.menuItem {
+  border-radius: calc(
+    var(--popover-radius, var(--mantine-radius-default)) - 4px
+  );
+}
+
+.scrollViewport {
+  --scroll-shade: light-dark(rgb(13 15 18 / 0.14), rgb(0 0 0 / 0.6));
+}
+
+.scrollViewport::before,
+.scrollViewport::after {
+  content: "";
+  position: sticky;
+  z-index: 1;
+  display: block;
+  height: 12px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.scrollViewport::before {
+  top: 0;
+  margin-bottom: -12px;
+  background: radial-gradient(
+    farthest-side at 50% 0,
+    var(--scroll-shade),
+    transparent
+  );
+}
+
+.scrollViewport::after {
+  bottom: 0;
+  margin-top: -12px;
+  background: radial-gradient(
+    farthest-side at 50% 100%,
+    var(--scroll-shade),
+    transparent
+  );
+}
+
+@supports (animation-timeline: scroll()) {
+  .scrollViewport::before {
+    animation: scrollShadeIn linear both;
+    animation-timeline: scroll();
+    animation-range: 0 24px;
+  }
+
+  .scrollViewport::after {
+    animation: scrollShadeOut linear both;
+    animation-timeline: scroll();
+    animation-range: calc(100% - 24px) 100%;
+  }
+}
+
+@supports not (animation-timeline: scroll()) {
+  .scrollViewport {
+    --scroll-cover: var(--scroll-shadow-cover, var(--mantine-color-body));
+
+    background:
+      linear-gradient(var(--scroll-cover) 40%, transparent) top / 100% 28px
+        no-repeat local,
+      linear-gradient(transparent, var(--scroll-cover) 60%) bottom / 100% 28px
+        no-repeat local,
+      radial-gradient(farthest-side at 50% 0, var(--scroll-shade), transparent)
+        top / 100% 12px no-repeat scroll,
+      radial-gradient(
+          farthest-side at 50% 100%,
+          var(--scroll-shade),
+          transparent
+        )
+        bottom / 100% 12px no-repeat scroll;
+  }
+}
+
+:where(.mantine-datatable) .scrollViewport::before,
+:where(.mantine-datatable) .scrollViewport::after {
+  display: none;
+}
+
+@keyframes scrollShadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scrollShadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}

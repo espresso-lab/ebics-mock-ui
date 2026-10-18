@@ -19,6 +19,11 @@ export interface Participant {
   createdAt: string
 }
 
+/** A participant as the admin API serves it, with the accounts HTD lists for it — none means every account. */
+export interface ParticipantResource extends Participant {
+  accountIds: string[]
+}
+
 export interface ParticipantKey {
   participantId: string
   type: EbicsKeyType

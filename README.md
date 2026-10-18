@@ -77,10 +77,10 @@ verifiziert.
 
 ## Unterschriftsklassen (Typ T)
 
-Jeder Teilnehmer trägt eine **Unterschriftsklasse** `E`, `A`, `B` oder `T` (Default `E`, Spalte
-*Unterschriftsklasse* unter *Teilnehmer*). Sie wird im HTD als `UserInfo/Permission/@AuthorisationLevel`
+Jeder Teilnehmer trägt eine **Unterschriftsklasse** `E`, `A`, `B` oder `T` (Default `E`, unter
+*Teilnehmer* → *Bearbeiten*). Sie wird im HTD als `UserInfo/Permission/@AuthorisationLevel`
 an den BTU-Berechtigungen ausgewiesen (an Downloads nie, § 9.4); `PartnerInfo/OrderInfo/NumSigRequired`
-bleibt 1. Der Schalter *Klasse im HTD ausweisen* simuliert eine Bank, die das optionale Attribut weglässt.
+bleibt 1. Ohne *Klasse im HTD ausweisen* simuliert der Teilnehmer eine Bank, die das optionale Attribut weglässt.
 
 Ein Teilnehmer der Klasse **T** (Transportunterschrift, EBICS 3.0.2 § 3.12/3.14/8.x) verhält sich so:
 
@@ -92,7 +92,7 @@ Ein Teilnehmer der Klasse **T** (Transportunterschrift, EBICS 3.0.2 § 3.12/3.14
 | HVD, HVT | `091007 EBICS_DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED` |
 | HVE, HVS | `090003` |
 
-Die Freigabe übernimmt unter *VEU / Freigaben* die Bank-App: **Freigeben (Bank-App)** signiert und
+Die Freigabe übernimmt unter *Freigaben* die Bank-App: **Freigeben** signiert und
 verbucht den Auftrag (HAC `VEU_VERIFICATION`/DS01, `VEU_VERIFICATION_END`/DS05, `ORDER_HAC_FINAL_POS`),
 **Stornieren** weist ihn ab (`VEU_CANCEL_ORDER`/DS02, `ORDER_HAC_FINAL_NEG`). E/A/B-Teilnehmer verhalten
 sich wie bisher (eine Unterschrift genügt, Auftrag sofort `RECEIVED`).
@@ -100,7 +100,8 @@ sich wie bisher (eine Unterschrift genügt, Auftrag sofort `RECEIVED`).
 Admin-API:
 
 ```
-PUT  /api/participants/:id/signature-class   { "signatureClass": "T", "disclosed": true }   (beide optional)
+PUT  /api/participants/:id                    { "signatureClass": "T", "signatureClassDisclosed": true,
+                                                "activated": true, "accountIds": ["…"] }      (alle optional)
 POST /api/participants/simulate               { "signatureClass": "T" }                      (optional, Default E)
 GET  /api/veu                                 alle VEU-Aufträge inkl. SIGNED/CANCELLED
 POST /api/veu/:id/approve  |  POST /api/veu/:id/cancel                                      (409 wenn nicht OPEN)
@@ -108,16 +109,22 @@ POST /api/veu/:id/approve  |  POST /api/veu/:id/cancel                          
 
 ## UI
 
-Alle Listen sind `mantine-data-table` mit Aufklapp-Details:
+Das UI folgt der Design-Sprache von abrechnung360: dieselbe Seitenleiste wie der Host (einklappbar,
+unter 992 px als Drawer), dasselbe Theme (`Theme.tsx`/`Theme.module.css` byteidentisch zum Host,
+nur die Markenfarbe ist in `bankTheme.ts` grün, damit die Mock Bank nie wie abrechnung360 aussieht),
+Brotkrumen, Zeilenaktionen und Bestätigungen wie dort. Alle Listen sind `mantine-data-table`:
 
-- **Teilnehmer** — INI/HIA/HPB-Ampel, Unterschriftsklasse (E/A/B/T) + HTD-Ausweis-Schalter, empfangene Schlüssel-Hashes
-- **Konten & Umsätze** — Konten + Buchungen anlegen/bearbeiten/löschen; *camt importieren* lädt echte camt.053-Umsätze hoch; Auswahl → *Auszug erzeugen* baut einen camt.053. Teilnehmer/Aufträge/Auszüge/VEU sind löschbar (zum Aufräumen)
-- **Eingereichte Aufträge** — per BTU eingereichte pain.001/008, entschlüsselt + geparst, mit Einzelposten und Roh-pain; die bankfachliche A006-Signatur (ES) wird verifiziert (gültig/ungültig/n.v.)
-- **Kontoauszüge** — erzeugte camt.053 (AVAILABLE/FETCHED), Inline-Anzeige
-- **VEU / Freigaben** — verteilte Unterschriften; *Freigeben (Bank-App)* / *Stornieren* simulieren die Freigabe eines T-Auftrags
+- **Übersicht** — Zugangsdaten zum Kopieren (Bank-URL, Host-ID) und die Hashwerte der Bank-Schlüssel im Format, in dem abrechnung360 sie zum Abgleich zeigt
+- **Teilnehmer** — ein Status je Teilnehmer (Angelegt → INI-Brief fehlt → Freigeschaltet → Bereit); *Freischalten* ersetzt den INI-Brief, *Bearbeiten* setzt Unterschriftsklasse, HTD-Ausweis und Kontoberechtigungen; aufgeklappt die empfangenen Schlüssel
+- **Konten** — Konten + Umsätze anlegen/bearbeiten/löschen; *camt-Datei hochladen* importiert echte camt.053-Umsätze; *Kontoauszug erstellen* baut einen camt.053
+- **Aufträge** — per BTU eingereichte pain.001/008 mit Posten und Auftragsdatei; die A006-Signatur wird geprüft (gültig/ungültig/keine); *Verbuchen* und *Zur Freigabe stellen* je Auftrag
+- **Freigaben** — Aufträge im Unterschriftsordner; *Freigeben* / *Stornieren* spielen die Bank-App
+- **Kontoauszüge** — erstellte camt.053 (abrufbar/abgeholt) zum Herunterladen
 - **Kundenprotokoll** — chronologisches HAC-Protokoll, je Zeile ein pain.002-Schritt (Aktion + Ergebniscode)
-- **Verkehr** — jeder Request/Response als Roh-XML (Debugging)
-- **Bank-Schlüssel** — das HPB-Material + PEM
+- **EBICS-Verkehr** — jeder Request mit Antwort als XML (Debugging), beides kopierbar
+
+Offene Aufträge und Freigaben zählt die Seitenleiste als Badge. Teilnehmer, Aufträge, Auszüge und
+Freigaben sind löschbar (zum Aufräumen).
 
 ## Konfiguration
 

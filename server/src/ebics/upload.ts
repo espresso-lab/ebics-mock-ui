@@ -117,6 +117,10 @@ function finalize(store: Store, participantId: string | null, transactionId: str
     pain.items.forEach((item) => store.addOrderItem(orderDbId, item))
     protocol(store, participantId, 'BTU', RETURN.OK, meta.orderId)
     if (meta.parkForVeu) parkForVeu(store, participantId ?? '', meta.orderId, pain, meta.signaturesDone ?? 0)
+    else {
+      protocol(store, participantId, 'BTU', RETURN.OK, meta.orderId, step('ES_VERIFICATION', REASON.SIGNATURES_CORRECT))
+      protocol(store, participantId, 'BTU', RETURN.OK, meta.orderId, step('ORDER_HAC_FINAL_POS'))
+    }
   }
 
   store.deleteTransactionState(transactionId)

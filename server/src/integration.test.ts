@@ -392,6 +392,7 @@ describe('EBICS handshake + flows (in-process)', () => {
       expect(returnCode).toBe('000000')
       expect(store.getOrderByOrderId(orderId)!.status).not.toBe('PENDING_VEU')
       expect(store.getVeuByOrderId(orderId)).toBeUndefined()
+      expect(hacActions(orderId)).toEqual(['FILE_UPLOAD', 'ES_VERIFICATION', 'ORDER_HAC_FINAL_POS'])
     })
 
     it('rejects a lone A signature without requestEDS', async () => {

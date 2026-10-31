@@ -271,7 +271,7 @@ describe('EBICS handshake + flows (in-process)', () => {
     const signature = signA006(client.a006.privateKeyPem, Buffer.from(painDocument, 'utf8'))
     const signatureData = aesEncryptDeflate(Buffer.from(userSignatureData(signature), 'utf8'), tek)
 
-    const initResponse = await post(btuInit(transactionKey.toString('base64'), signatureData.toString('base64')))
+    const initResponse = await post(btuInit(transactionKey.toString('base64'), signatureData.toString('base64'), '<SignatureFlag requestEDS="true"/>'))
     expect(verifyDocument(initResponse, bankX002Pem)).toBe(true)
     const transactionId = textOf(parseXml(initResponse), 'TransactionID')
     const orderId = textOf(parseXml(initResponse), 'OrderID')
@@ -296,7 +296,7 @@ describe('EBICS handshake + flows (in-process)', () => {
     const signature = signA006(foreign.privateKeyPem, Buffer.from(painDocument, 'utf8'))
     const signatureData = aesEncryptDeflate(Buffer.from(userSignatureData(signature), 'utf8'), tek)
 
-    const initResponse = await post(btuInit(transactionKey.toString('base64'), signatureData.toString('base64')))
+    const initResponse = await post(btuInit(transactionKey.toString('base64'), signatureData.toString('base64'), '<SignatureFlag requestEDS="true"/>'))
     const transactionId = textOf(parseXml(initResponse), 'TransactionID')
     const orderId = textOf(parseXml(initResponse), 'OrderID')
     await post(btuTransfer(transactionId, orderData.toString('base64')))
@@ -375,6 +375,39 @@ describe('EBICS handshake + flows (in-process)', () => {
       expect(res.json()).toMatchObject({ status: 'CANCELLED' })
       expect(store.getOrderByOrderId(orderId)!.status).toBe('REJECTED')
       expect(hacActions(orderId).slice(-2)).toEqual(['VEU_CANCEL_ORDER', 'ORDER_HAC_FINAL_NEG'])
+    })
+  })
+
+  describe('signature flag and classes (EBICS 3.0.2, 3.14 and 8.2)', () => {
+    const participant = () => store.listParticipants()[0]!
+
+    it('counts an E signature without the signature flag as transport only and rejects the order', async () => {
+      store.setSignatureClass(participant().id, 'E')
+      expect((await uploadPain('')).returnCode).toBe('090003')
+    })
+
+    it('executes an E order with the signature flag at once, requestEDS or not', async () => {
+      store.setSignatureClass(participant().id, 'E')
+      const { returnCode, orderId } = await uploadPain('<SignatureFlag requestEDS="true"/>')
+      expect(returnCode).toBe('000000')
+      expect(store.getOrderByOrderId(orderId)!.status).not.toBe('PENDING_VEU')
+      expect(store.getVeuByOrderId(orderId)).toBeUndefined()
+    })
+
+    it('rejects a lone A signature without requestEDS', async () => {
+      store.setSignatureClass(participant().id, 'A')
+      expect((await uploadPain('<SignatureFlag/>')).returnCode).toBe('090003')
+    })
+
+    it('parks an A order with requestEDS for the second signature and executes it once given', async () => {
+      store.setSignatureClass(participant().id, 'A')
+      const { returnCode, orderId } = await uploadPain('<SignatureFlag requestEDS="true"/>')
+      expect(returnCode).toBe('000000')
+      const veu = store.getVeuByOrderId(orderId)!
+      expect(veu).toMatchObject({ status: 'OPEN', signaturesDone: 1, signaturesRequired: 2 })
+      const res = await app.inject({ method: 'POST', url: `/api/veu/${veu.id}/approve` })
+      expect(res.json()).toMatchObject({ status: 'SIGNED', signaturesDone: 2 })
+      expect(hacActions(orderId).slice(-2)).toEqual(['VEU_VERIFICATION_END', 'ORDER_HAC_FINAL_POS'])
     })
   })
 

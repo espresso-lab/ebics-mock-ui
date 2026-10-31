@@ -17,13 +17,17 @@ interface UploadMeta {
   serviceName: string
   signatureData?: string
   parkForVeu: boolean
+  signaturesDone: number
 }
 
 export function handleBtuInitialisation(store: Store, parsed: ParsedRequest, participant: Participant): HandlerResult {
   const bankE002 = requireBankKey(store, 'E002')
   if (!parsed.transactionKey) return uploadError(store, participant, RETURN.INTERNAL_ERROR)
+  // EBICS 3.0.2, 3.14 and 8.2: without the signature flag every signature counts as a transport signature,
+  // T and a lone A or B need requestEDS to wait in the VEU, E is executed right away.
   const transportOnly = participant.signatureClass === 'T'
-  if (transportOnly && !parsed.requestEds) {
+  const needsSecondSignature = participant.signatureClass === 'A' || participant.signatureClass === 'B'
+  if (!parsed.signatureFlag || ((transportOnly || needsSecondSignature) && !parsed.requestEds)) {
     return uploadError(store, participant, RETURN.AUTHORISATION_ORDER_IDENTIFIER_FAILED, step('ES_VERIFICATION', REASON.NOT_ALLOWED_PAYMENT))
   }
 
@@ -35,7 +39,8 @@ export function handleBtuInitialisation(store: Store, parsed: ParsedRequest, par
     orderId,
     serviceName: parsed.btf?.serviceName ?? 'SCT',
     signatureData: parsed.signatureData?.toString('base64'),
-    parkForVeu: transportOnly,
+    parkForVeu: transportOnly || needsSecondSignature,
+    signaturesDone: needsSecondSignature ? 1 : 0,
   }
   store.createTransactionState({
     transactionId: txId,
@@ -111,7 +116,7 @@ function finalize(store: Store, participantId: string | null, transactionId: str
     })
     pain.items.forEach((item) => store.addOrderItem(orderDbId, item))
     protocol(store, participantId, 'BTU', RETURN.OK, meta.orderId)
-    if (meta.parkForVeu) parkForVeu(store, participantId ?? '', meta.orderId, pain)
+    if (meta.parkForVeu) parkForVeu(store, participantId ?? '', meta.orderId, pain, meta.signaturesDone ?? 0)
   }
 
   store.deleteTransactionState(transactionId)
@@ -125,15 +130,15 @@ function finalize(store: Store, participantId: string | null, transactionId: str
   return { xml, participantId, orderType: 'BTU', phase: 'Transfer', returnCode: RETURN.OK, transactionId }
 }
 
-function parkForVeu(store: Store, participantId: string, orderId: string, pain: ParsedPain) {
+function parkForVeu(store: Store, participantId: string, orderId: string, pain: ParsedPain, signaturesDone: number) {
   store.createVeu({
     orderId,
     participantId,
     kind: pain.kind,
     totalAmount: pain.totalAmount,
     currency: pain.currency,
-    signaturesRequired: 1,
-    signaturesDone: 0,
+    signaturesRequired: signaturesDone + 1,
+    signaturesDone,
   })
   protocol(store, participantId, 'BTU', RETURN.OK, orderId, step('ES_VERIFICATION', REASON.SIGNATURES_CORRECT))
   protocol(store, participantId, 'BTU', RETURN.OK, orderId, step('VEU_FORWARDING', REASON.TRANSFERRED_TO_VEU))

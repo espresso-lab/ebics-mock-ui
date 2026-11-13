@@ -148,6 +148,16 @@ CREATE TABLE IF NOT EXISTS veu_order (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS veu_signature (
+  veu_id TEXT NOT NULL,
+  participant_id TEXT NOT NULL,
+  authorisation_level TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (veu_id, participant_id),
+  FOREIGN KEY (veu_id) REFERENCES veu_order(id) ON DELETE CASCADE,
+  FOREIGN KEY (participant_id) REFERENCES participant(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS transaction_state (
   transaction_id TEXT PRIMARY KEY,
   participant_id TEXT,

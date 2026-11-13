@@ -144,6 +144,16 @@ export interface Exchange {
   createdAt: string
 }
 
+/** A bank-technical signature a participant gave to an order in the VEU — at the upload (class A or B) or later via HVE. */
+export interface VeuSigner {
+  participantId: string
+  partnerId: string
+  userId: string
+  userName: string
+  authorisationLevel: SignatureClass
+  createdAt: string
+}
+
 export interface VeuOrder {
   id: string
   orderId: string
@@ -155,4 +165,5 @@ export interface VeuOrder {
   signaturesRequired: number
   status: 'OPEN' | 'SIGNED' | 'CANCELLED'
   createdAt: string
+  signers: VeuSigner[]
 }

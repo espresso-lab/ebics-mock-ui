@@ -25,7 +25,16 @@ const fields: Field<VeuOrder>[] = [
     title: "Unterschriften",
     textAlign: "right",
     visibleMediaQuery: "(min-width: 62em)",
-    render: (veu) => `${veu.signaturesDone} von ${veu.signaturesRequired}`,
+    render: (veu) => (
+      <>
+        {veu.signaturesDone} von {veu.signaturesRequired}
+        {veu.signers.length > 0 && (
+          <Text size="sm" c="dimmed">
+            {veu.signers.map((signer) => `${signer.userId} (${signer.authorisationLevel})`).join(", ")}
+          </Text>
+        )}
+      </>
+    ),
   }),
   field("status", { accessor: "status", title: "Status", render: (veu) => <StatusBadge status={veuStatus[veu.status]} /> }),
   field("createdAt", {

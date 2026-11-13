@@ -64,7 +64,10 @@ function removeOsSpecificChars(data: Buffer): Buffer {
 }
 
 export function signA006(privateKeyPem: string, data: Buffer): Buffer {
-  const digest = createHash('sha256').update(removeOsSpecificChars(data)).digest()
+  return signA006Digest(privateKeyPem, orderHash(data))
+}
+
+export function signA006Digest(privateKeyPem: string, digest: Buffer): Buffer {
   return signRaw('sha256', digest, {
     key: privateKeyFromPem(privateKeyPem),
     padding: constants.RSA_PKCS1_PSS_PADDING,
@@ -72,8 +75,17 @@ export function signA006(privateKeyPem: string, data: Buffer): Buffer {
   })
 }
 
+/** The hash value of order data as A006 signs it (EBICS 3.0.2, 14) — what HVD and HVZ hand out as DataDigest. */
+export function orderHash(data: Buffer): Buffer {
+  return createHash('sha256').update(removeOsSpecificChars(data)).digest()
+}
+
 export function verifyA006(publicKeyPem: string, data: Buffer, signature: Buffer): boolean {
-  const digest = createHash('sha256').update(removeOsSpecificChars(data)).digest()
+  return verifyA006Digest(publicKeyPem, orderHash(data), signature)
+}
+
+/** Verifies an A006 signature over an order's hash value, as HVE and HVS carry it (EBICS 3.0.2, 8.3.4). */
+export function verifyA006Digest(publicKeyPem: string, digest: Buffer, signature: Buffer): boolean {
   return verifyRaw(
     'sha256',
     digest,

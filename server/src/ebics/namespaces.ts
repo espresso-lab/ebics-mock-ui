@@ -16,6 +16,7 @@ export const RETURN = {
   DOWNLOAD_POSTPROCESS_DONE: '011000',
   DOWNLOAD_POSTPROCESS_SKIPPED: '011001',
   NO_DOWNLOAD_DATA: '090005',
+  UNSUPPORTED_REQUEST_FOR_ORDER_INSTANCE: '090006',
   AUTHENTICATION_FAILED: '061001',
   INVALID_REQUEST: '061002',
   INTERNAL_ERROR: '061099',
@@ -23,6 +24,11 @@ export const RETURN = {
   INVALID_USER_OR_USER_STATE: '091002',
   DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED: '091007',
   TX_UNKNOWN: '091101',
+  INVALID_ORDER_PARAMS: '091112',
+  ORDERID_UNKNOWN: '091114',
+  ORDERID_ALREADY_FINAL: '091115',
+  SIGNATURE_VERIFICATION_FAILED: '091301',
+  DUPLICATE_SIGNATURE: '091306',
 } as const
 
 export const RETURN_TEXT: Record<string, string> = {
@@ -30,6 +36,7 @@ export const RETURN_TEXT: Record<string, string> = {
   '011000': '[EBICS_DOWNLOAD_POSTPROCESS_DONE] positive Quittung erhalten',
   '011001': '[EBICS_DOWNLOAD_POSTPROCESS_SKIPPED] negative Quittung erhalten',
   '090005': '[EBICS_NO_DOWNLOAD_DATA_AVAILABLE] keine Daten verfügbar',
+  '090006': '[EBICS_UNSUPPORTED_REQUEST_FOR_ORDER_INSTANCE] Anfrage für diesen Auftrag nicht unterstützt',
   '061001': '[EBICS_AUTHENTICATION_FAILED] Authentifikationssignatur fehlerhaft',
   '061002': '[EBICS_INVALID_REQUEST] Nachricht nicht EBICS-konform',
   '061099': '[EBICS_INTERNAL_ERROR] interner EBICS-Fehler',
@@ -37,4 +44,9 @@ export const RETURN_TEXT: Record<string, string> = {
   '091002': '[EBICS_INVALID_USER_OR_USER_STATE] Teilnehmer unbekannt oder Zustand unzulässig',
   '091007': '[EBICS_DISTRIBUTED_SIGNATURE_AUTHORISATION_FAILED] keine VEU-Berechtigung',
   '091101': '[EBICS_TX_UNKNOWN_TXID] Transaktions-ID ungültig',
+  '091112': '[EBICS_INVALID_ORDER_PARAMS] ungültige Auftragsparameter',
+  '091114': '[EBICS_ORDERID_UNKNOWN] Auftragsnummer unbekannt',
+  '091115': '[EBICS_ORDERID_ALREADY_FINAL] Auftrag bereits abschließend bearbeitet',
+  '091301': '[EBICS_SIGNATURE_VERIFICATION_FAILED] Verifikation der EU fehlgeschlagen',
+  '091306': '[EBICS_DUPLICATE_SIGNATURE] Unterzeichner hat bereits unterschrieben',
 }

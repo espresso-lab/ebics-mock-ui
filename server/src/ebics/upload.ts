@@ -32,7 +32,7 @@ export function handleBtuInitialisation(store: Store, parsed: ParsedRequest, par
   }
 
   const tek = decryptTransactionKey(parsed.transactionKey, bankE002.privateKeyPem)
-  const orderId = newOrderId()
+  const orderId = unusedOrderId(store)
   const txId = newTransactionId()
   const meta: UploadMeta = {
     tek: tek.toString('base64'),
@@ -135,7 +135,7 @@ function finalize(store: Store, participantId: string | null, transactionId: str
 }
 
 function parkForVeu(store: Store, participantId: string, orderId: string, pain: ParsedPain, signaturesDone: number) {
-  store.createVeu({
+  const veu = store.createVeu({
     orderId,
     participantId,
     kind: pain.kind,
@@ -144,8 +144,18 @@ function parkForVeu(store: Store, participantId: string, orderId: string, pain: 
     signaturesRequired: signaturesDone + 1,
     signaturesDone,
   })
+  const submitter = store.getParticipant(participantId)
+  if (submitter && signaturesDone > 0) store.addVeuSigner(veu.id, participantId, submitter.signatureClass)
   protocol(store, participantId, 'BTU', RETURN.OK, orderId, step('ES_VERIFICATION', REASON.SIGNATURES_CORRECT))
   protocol(store, participantId, 'BTU', RETURN.OK, orderId, step('VEU_FORWARDING', REASON.TRANSFERRED_TO_VEU))
+}
+
+/** The bank names an order by its number in HAC and the VEU, so no two orders may share one. */
+function unusedOrderId(store: Store): string {
+  for (;;) {
+    const orderId = newOrderId()
+    if (!store.getOrderByOrderId(orderId)) return orderId
+  }
 }
 
 function uploadError(store: Store, participant: Participant, returnCode: string, hac?: HacStep): HandlerResult {

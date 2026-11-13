@@ -19,6 +19,7 @@ import type {
   SignatureClass,
   Statement,
   VeuOrder,
+  VeuSigner,
 } from '@ebics-mock/shared'
 import { SCHEMA } from './schema.js'
 
@@ -492,26 +493,61 @@ export class Store {
 
   getVeu(id: string): VeuOrder | undefined {
     const r = this.db.prepare('SELECT * FROM veu_order WHERE id = ?').get(id) as Row | undefined
-    return r ? mapVeu(r) : undefined
+    return r ? this.veuOf(r) : undefined
   }
 
   getVeuByOrderId(orderId: string): VeuOrder | undefined {
     const r = this.db.prepare('SELECT * FROM veu_order WHERE order_id = ?').get(orderId) as Row | undefined
-    return r ? mapVeu(r) : undefined
+    return r ? this.veuOf(r) : undefined
   }
 
   listVeu(): VeuOrder[] {
-    return (this.db.prepare('SELECT * FROM veu_order ORDER BY created_at DESC').all() as Row[]).map(mapVeu)
+    return (this.db.prepare('SELECT * FROM veu_order ORDER BY created_at DESC').all() as Row[]).map((r) => this.veuOf(r))
   }
 
   listOpenVeu(): VeuOrder[] {
     return (this.db.prepare("SELECT * FROM veu_order WHERE status = 'OPEN' ORDER BY created_at").all() as Row[]).map(
-      mapVeu,
+      (r) => this.veuOf(r),
     )
   }
 
-  updateVeu(id: string, signaturesDone: number, status: VeuOrder['status']) {
-    this.db.prepare('UPDATE veu_order SET signatures_done = ?, status = ? WHERE id = ?').run(signaturesDone, status, id)
+  /** The open orders of one customer — what the VEU folder of each of its participants holds. */
+  listOpenVeuOfCustomer(hostId: string, partnerId: string): VeuOrder[] {
+    return (
+      this.db
+        .prepare(
+          `SELECT v.* FROM veu_order v JOIN participant p ON p.id = v.participant_id
+           WHERE v.status = 'OPEN' AND p.host_id = ? AND p.partner_id = ? ORDER BY v.created_at`,
+        )
+        .all(hostId, partnerId) as Row[]
+    ).map((r) => this.veuOf(r))
+  }
+
+  updateVeu(id: string, signaturesDone: number, status: VeuOrder['status'], signaturesRequired?: number) {
+    this.db
+      .prepare(
+        'UPDATE veu_order SET signatures_done = ?, status = ?, signatures_required = COALESCE(?, signatures_required) WHERE id = ?',
+      )
+      .run(signaturesDone, status, signaturesRequired ?? null, id)
+  }
+
+  addVeuSigner(veuId: string, participantId: string, authorisationLevel: SignatureClass) {
+    this.db
+      .prepare('INSERT INTO veu_signature (veu_id, participant_id, authorisation_level, created_at) VALUES (?, ?, ?, ?)')
+      .run(veuId, participantId, authorisationLevel, now())
+  }
+
+  private veuOf(r: Row): VeuOrder {
+    const signers = (
+      this.db
+        .prepare(
+          `SELECT s.participant_id, s.authorisation_level, s.created_at, p.partner_id, p.user_id, p.user_name
+           FROM veu_signature s JOIN participant p ON p.id = s.participant_id
+           WHERE s.veu_id = ? ORDER BY s.created_at`,
+        )
+        .all(str(r.id)) as Row[]
+    ).map(mapVeuSigner)
+    return { ...mapVeu(r), signers }
   }
 
   updateAccount(id: string, input: Partial<Account>): Account | undefined {
@@ -736,7 +772,18 @@ function mapExchange(r: Row): Exchange {
   }
 }
 
-function mapVeu(r: Row): VeuOrder {
+function mapVeuSigner(r: Row): VeuSigner {
+  return {
+    participantId: str(r.participant_id),
+    partnerId: str(r.partner_id),
+    userId: str(r.user_id),
+    userName: str(r.user_name),
+    authorisationLevel: r.authorisation_level as SignatureClass,
+    createdAt: str(r.created_at),
+  }
+}
+
+function mapVeu(r: Row): Omit<VeuOrder, 'signers'> {
   return {
     id: str(r.id),
     orderId: str(r.order_id),

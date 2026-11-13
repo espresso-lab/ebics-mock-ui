@@ -6,8 +6,11 @@ export function newTransactionId(): string {
   return randomBytes(16).toString('hex').toUpperCase()
 }
 
+const ORDER_ID_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+/** An order number as EBICS forms them (OrderIDType: a letter and three letters or digits). */
 export function newOrderId(): string {
-  return 'N' + randomBytes(2).toString('hex').toUpperCase().slice(0, 3)
+  return 'N' + [...randomBytes(3)].map((byte) => ORDER_ID_CHARACTERS[byte % ORDER_ID_CHARACTERS.length]).join('')
 }
 
 function reportText(code: string): string {
